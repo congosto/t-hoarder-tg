@@ -17,7 +17,7 @@ Los cuadernos para acceder a los datos (data) y las claves (keys) lo hacen de ma
 ```         
 dir_raiz ----+-----datos      # Cada dataset en un directorio independiente
              |
-             +-----notebooks # Se guardan los notebooh en R
+             +-----notebooks  # Se guardan los notebooh en R
       
 ```
 
