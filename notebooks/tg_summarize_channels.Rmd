@@ -1,0 +1,259 @@
+---
+title: "tg_summarize_channels"
+params: 
+    data_root : "../datos/"  #directorio raiz de los datos
+    dataset_name: "alvise_n2"         # Nombre del dataset (también será el nombre del directorio)
+    msgs : "msgs_dataset.csv"            # Nombre del fichero con los mensajes
+    metadatos : "collected_chats.xlsx"    # Nombre metadatos de los channels
+---
+
+```{r setup, 	echo = TRUE,message = FALSE,	warning = FALSE,include=FALSE, cache = FALSE}
+
+require("knitr")
+## setting working directory
+opts_knit$set(root.dir = "./")
+```
+
+## Entorno de trabajo por defecto
+
+Estos notebooks trabajan con esta estructura de directorios
+
+El directorio de datos por defecto relativo a notebooks y será ../datos/ pero se puede poner en los parámetros un directorio absoluto
+
+    dir_raiz ----+-----datos      # Se guardan los datos, cada dataset en un directorio independiente
+                 |
+                 +-----notebooks # Se guardan los notebooks en R
+                 
+
+## Requisitos
+
+-   Disponer de una o varias descargas de channels Telegram
+
+
+## Importamos librerías
+
+```{r libraries}
+if (!"tidyverse" %in% installed.packages()) {install.packages("tidyverse")}
+if (!"lubridate" %in% installed.packages()) {install.packages("lubridate")}
+if (!"base" %in% installed.packages()) {install.packages("base")}
+if (!"readxl" %in% installed.packages()) {install.packages("readxl")}
+library(base)             # Librerías base de R
+library(tidyverse)        # Manejo de datos y gráficas
+library(lubridate)        # Manejo de fechas
+library(readxl)        # Manejo de fechas
+locale(date_names = "en", date_format = "%AD", time_format = "%AT",
+  decimal_mark = ".", grouping_mark = ",", tz = "Europe/Berlin",
+  encoding = "UTF-8", asciify = FALSE)
+Sys.setlocale(category = "LC_ALL", locale = "english")
+
+```
+
+## Entorno por defecto
+
+```{r environment}
+## Entorno por defecto. No tocar salvo que se quiera usar otro entorno
+dataset_name <- params$dataset_name    # Nombre del dataset
+data_path <- paste0(params$data_root, dataset_name, "/") # Directorio de datos
+name_file_msgs <- paste0(data_path,params$msgs) # Fichero de mensajes
+name_file_metadatos <- paste0(data_path,params$metadatos) # Fichero de metadatos
+name_file_channels <- paste0(data_path,dataset_name,"_channels.csv") # channels
+name_file_urls <- paste0(data_path,dataset_name,"_urls.csv") # Fichero urls
+name_file_dominios <- paste0(data_path,dataset_name,"_dominios.csv") # Fichero Dominios
+name_file_dominios_channel <- paste0(data_path,dataset_name,"_dominios_channel.csv") # Fichero Dominios_channel
+name_file_fechas <- paste0(data_path,dataset_name,"_fechas.csv") # Fichero fechas
+name_file_fechas_channel <- paste0(data_path,dataset_name,"_fechas_channel.csv") # Fichero fechas_channel
+name_file_gdf <- paste0(data_path,dataset_name,".gdf") # Fichero gdf
+```
+
+## Leemos los datos
+
+```{r read_data, warning=FALSE}
+# Leer fichero de mensajes
+print("Leyendo fichero de mensajes")
+msgs_df <- read_csv(
+  name_file_msgs,
+  col_names = TRUE,
+  cols_only( 
+    msg_id = col_character(),
+    channel_name = col_character(),
+    message = col_character(),
+    date = col_datetime(),
+    msg_link = col_character(),
+    forward_msg_link = col_character()
+  )
+) %>%
+  mutate(channel_dest = ifelse(
+    str_detect(forward_msg_link, "^https://t.me/"), 
+      str_extract(forward_msg_link, "(?<=https://t.me/)[^/]+"), 
+      NA)) %>% 
+  group_by(msg_id) %>%
+  slice(1) %>%
+  ungroup() %>%
+  arrange (date)
+print("Leyendo fichero de metadatos")
+metadatos_df <- read_excel (name_file_metadatos) %>%
+  mutate (log_participants = ifelse(participants_count > 0,round(log10(participants_count),0),0)) %>%
+  mutate (created_year = year (date)) %>% 
+  group_by(username) %>%
+  slice(1) %>%
+  ungroup()
+
+
+
+
+```
+
+## Extracción de datos
+
+### channels 
+
+```{r extraet_channels, warning=FALSE}
+print("Extraer channels")
+resumen <- msgs_df %>%
+  arrange (date) %>%
+  group_by(channel_name) %>%
+  summarise(
+    mensajes = sum(!is.na(message)),
+    primer_mensaje = first(date)
+  ) %>%
+  ungroup()
+print("imprimir channels")
+write_csv(resumen, name_file_channels)
+
+```
+
+### URLs y dominios
+
+```{r extraer_urls_dominios}
+print("Extraer enlaces por channel")
+urls_channel <- msgs_df %>%
+  mutate(enlace = str_extract(message, "(?i)\\bhttps?://\\S+")) %>% # Extraer enlaces
+  mutate(dominio = str_extract(enlace, "(?<=://)[^/]+")) %>% # Extraer dominios
+  filter (!is.na(enlace)) %>%
+  group_by(enlace, dominio,channel_name) %>%
+  summarise(
+    menciones_url_channel = n(),
+    .groups = "drop") %>%
+  arrange (desc(menciones_url_channel)) %>%
+  ungroup ()
+print("Extraer enlaces")
+urls <- urls_channel %>%
+  group_by(enlace, dominio) %>%
+  summarise(
+    menciones_url = sum( menciones_url_channel),
+    .groups = "drop"          ) %>%
+  arrange (desc(menciones_url)) 
+print("Grabando URLs ")
+write_csv(urls, name_file_urls)
+print("Extraer dominios")
+dominios <- urls_channel %>%
+  group_by(dominio) %>% # Agrupar y resumir Dominios
+  summarize(
+    menciones_dominio = sum (menciones_url_channel),
+    .groups = "drop"
+  ) %>%
+  arrange (desc(menciones_dominio))
+print("Grabando dominios ")
+write_csv(dominios, name_file_dominios)
+print("Extraer dominios-channel")
+dominios_channel <- urls_channel %>%
+  group_by(channel_name,dominio) %>% # Agrupar y resumir Dominios
+  summarize(
+    menciones_dominio_channel = sum (menciones_url_channel),
+    .groups = "drop"
+  )%>%
+  arrange (channel_name,desc(menciones_dominio_channel))
+print("Grabando dominios-channel ")
+write_csv(dominios_channel, name_file_dominios_channel)
+
+```
+
+### Timelines
+
+```{r timelines}
+print ("Totales channels por fechas")
+resumen <- msgs_df %>%
+  mutate(fecha = lubridate::ymd_hms(date)) %>%
+  mutate(anio_mes = format(fecha, "%Y-%m")) %>%
+  group_by(anio_mes) %>%
+  summarise(
+    mensajes = n(),
+    .groups = "drop"
+    )
+print("Grabando fechas total")
+write_csv(resumen,name_file_fechas)
+print ("Procesando Fechas_channel")
+resumen  <- msgs_df %>%
+  mutate(fecha = lubridate::ymd_hms(date)) %>%
+  mutate(anio = lubridate::year(fecha), mes = lubridate::month(fecha, label = TRUE)) %>%
+  group_by(channel_name, anio, mes) %>%
+  summarise(
+    mensajes = n(),
+    .groups = "drop")
+print("Grabando fechas-channel ")
+write_csv(resumen, name_file_fechas_channel)
+```
+
+## Generar gdf
+
+### Obtener nodos
+
+```{r extraer_nodos}
+print("Obteniendo nodos ")
+forward_in <- msgs_df %>%
+  filter (!is.na(channel_dest)) %>%
+  group_by(channel_dest) %>% 
+  summarize(
+    count_forwards_in = n(),
+    .groups = "drop"
+  ) 
+forward_out <- msgs_df %>%
+  filter (!is.na(channel_dest)) %>%
+  group_by(channel_name) %>% 
+  summarize(
+    count_forwards_out = n(),
+    .groups = "drop"
+  ) 
+nodos <- metadatos_df %>%
+  left_join(forward_in , by = c("username" = "channel_dest")) %>%
+  left_join(forward_out , by = c("username" = "channel_name")) %>%
+  mutate (count_forwards_in = ifelse(!is.na(count_forwards_in),count_forwards_in, 0)) %>%
+  mutate (count_forwards_out = ifelse(!is.na(count_forwards_out),count_forwards_out, 0 )) %>%
+  mutate (count_forward_tot = count_forwards_in + count_forwards_out ) %>%
+  arrange (desc(count_forward_tot)) %>%
+  select (username, count_forward_tot, count_forwards_in, count_forwards_out, date, created_year, participants_count, log_participants,fake, verified)   # Cambiar orden de las columnas
+```
+
+### Extraer aristas
+
+
+```{r extraer_aristas}
+# Extraer referencia de channel
+print("Obteniendo aristas ")
+aristas <- msgs_df %>%
+  filter (!is.na(channel_dest)) %>%
+  filter (channel_name != channel_dest) %>%
+  mutate (directed ="TRUE") %>%
+  group_by(channel_name, channel_dest,directed) %>% 
+  summarize(
+    count = n(),
+    .groups = "drop"
+  ) 
+
+``` 
+
+
+
+
+## Generar el gdf
+
+```{r write_file_gdf}
+# generamos la cabecera de los nodos y arcos
+head_nodos <- "nodedef> name VARCHAR, tot_forward INT, in_forwards INT, out_forwards INT, date_since VARCHAR, year_since VARCHAR, participants_count INT, log_participants INT,  fake BOOLEAN, verified BOOLEAN"
+head_arcos <- "edgedef>node1 VARCHAR,node2 VARCHAR, directed BOOLEAN, weight INT"  
+# escribimos el fichero gdf
+write(head_nodos, name_file_gdf)
+write_csv(nodos, name_file_gdf, append = TRUE, col_names = FALSE)
+write(head_arcos, name_file_gdf, append = TRUE,)
+write_csv(aristas, name_file_gdf, append = TRUE, col_names = FALSE)
+```

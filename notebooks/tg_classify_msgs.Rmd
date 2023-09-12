@@ -1,0 +1,229 @@
+---
+title: "Clasificar los mensajes con un fichero Gephi"
+output: html_notebook
+editor_options: 
+  markdown: 
+    wrap: 72
+params:
+    data_root : "../datos/"  #directorio raiz de los datos
+    dataset_name : "alvise_n2"            # Nombre del dataset
+    msgs : "msgs_dataset.csv"            # Nombre del dataset
+    file_gephi: "alvise_n2_nodos.csv"            # Nombre del fichero que se ha exportado de gephi
+    max_communities: 2                    # El valor máximo es 14 pero se puede poner un número menor
+---
+
+```{r setup, 	echo = TRUE,message = FALSE,	warning = FALSE,include=FALSE, cache = FALSE}
+
+require("knitr")
+## setting working directory
+opts_knit$set(root.dir = "./")
+print(opts_knit$set)
+```
+
+## Entorno de trabajo
+
+Estos notebooks trabajan con esta estructura de directorios
+
+```         
+dir_raiz ----+-----datos      # Se guardan los datos, cada dataset en un directorio independiente
+             |
+             +-----notebooks # Se guardan los notebooh en R
+```
+
+## Ciclo de Análisis ARS: Clasificar msgs por ARS
+
+![ciclo Análisis ARS: Clasificar
+msgs](https://github.com/congosto/congosto.github.io/raw/master/ciclo_ARS_classify.jpg)
+
+Este script clasifica los msgs según la "modularity class" calculada
+con Gephi. Para hacer la clasificación se necesitan:
+
+-   El dataset con los msgs
+-   Un fichero exportado de Gephi con los datos de red de los canales
+
+La clasificación se realiza añadiendo la columna "community" al dataset
+con los msgs en la que se aplicará:
+
+-   La "modularity class" del canal
+
+Adicionalmente, generará las leyendas para la visualización de la
+propagación por "community"
+
+El resultado se almacena en un fichero con el nombre del dataset y el
+sufijo "communities".
+
+```{r libraries}
+if(!"tidyverse" %in% installed.packages()) {install.packages("tidyverse")}
+library(tidyverse) # Manejo de datos y gráficas
+```
+
+## Importamos funciones
+
+```{r functions}
+source("./utils/tg_share_functions.R")              # Funciones generales
+```
+
+## Entorno por defecto
+
+```{r environment}
+## Entorno por defecto. No tocar salvo que se quiera usar otro entorno
+dataset_name <- params$dataset_name         # Nombre del dataset
+max_communities <-  params$max_communities  # El valor máximo es 14 pero se puede poner un número menor
+data_path <- paste0(params$data_root, dataset_name, "/") # Directorio de datos
+name_file_in <- paste0(data_path, params$msgs)
+name_file_gephi <- paste0(data_path, params$file_gephi) 
+name_file_out <- paste0(data_path,dataset_name,"_classified.csv")
+name_file_communities <- paste0(data_path,dataset_name,"_communities.csv")
+```
+
+## Leemos los msgs y del fichero de gephi
+
+```{r read_data}
+msgs_df <- read_csv(
+  name_file_in,
+  col_names = TRUE,
+  cols_only( 
+    msg_id = col_character(),
+    channel_name = col_character(),
+    message = col_character(),
+    date = col_datetime(),
+    msg_link = col_character(),
+    forward_msg_link  = col_character()
+  ) 
+) %>%
+  group_by(msg_id) %>%
+  slice(1) %>%
+  ungroup() %>%
+  arrange (date)
+
+datos_gephi <- read_csv(
+  name_file_gephi,
+  col_names = TRUE,
+  cols_only(
+    Label = col_character(), 
+    tot_forward = col_number(),
+    modularity_class = col_character(),
+    componentnumber = col_number(),
+    in_forwards = col_number()
+  )
+)
+```
+
+## Clasificamos msgs
+
+
+## Clasificamos msgs
+
+```{r classify_msgs}
+`%!in%` = Negate(`%in%`)
+
+# Filtrar la componente gigante(si la hay) 
+if("componentnumber" %in% names(datos_gephi)) {
+datos_gephi <- datos_gephi #%>%
+  #filter(componentnumber == 0 ) #filtar nodos de la componente gigante
+}
+datos_gephi_cg <- datos_gephi %>%
+  filter(tot_forward >0) %>%
+  select(Label,modularity_class, in_forwards)  #seleccionar datos para la clasificación
+
+msgs_clasificados <- msgs_df %>%
+  left_join(datos_gephi_cg, by = c("channel_name" = "Label")) %>% # Unir datos de gephi
+  rename("community" = "modularity_class") # Renombrar modularity_class por community
+# Ver cuantos mensajes quedan sin clasificar 
+num_msgs = nrow(msgs_df)
+msgs_sin_clasificar <- msgs_clasificados %>%
+  filter( is.na(community)) 
+num_msgs_sin_clasificar <-  nrow(msgs_sin_clasificar)   
+print(paste0("msgs sin clasificar: ", round((num_msgs_sin_clasificar*100)/num_msgs,2),"%")) 
+## escribir los msgs
+write_csv(msgs_clasificados, name_file_out)
+```
+
+## Generamos los ficheros de comunidades para las gráficas
+
+Para evitar el trabajo tedioso de generar manualmente los colores de las
+comunidades que detecta Gephi se ofrece una manera de automatizarlo
+aunque con algunas limitaciones:
+
+-   Se limita el número de comunidades a catorce, cifra que creo que es
+    suficiente en la mayoría de los casos.
+
+-   Se han elegido los ocho colores que Gephi asigna por defecto como lo
+    primeros ocho colores y se han añadido seis más hasta completar los
+    catorce.
+
+![Colores por defecto de Gephi](./colores_defecto_gephi.PNG)
+
+Colores por defecto del script:
+
+-   [#CC66FF RGB(204,102,255)]{style="color:#CC66FF"}
+-   [#92D050 RGB(146,208,80)]{style="color:#92D050"}
+-   [#00B0F0 RGB(0,176,240)]{style="color:#00B0F0"}
+-   [#404040 RGB(64,64,64)]{style="color:#404040"}
+-   [#FF9900 RGB(255,153,0)]{style="color:#FF9900"}
+-   [#FF5050 RGB(255,80,80)]{style="color:#FF5050"}
+-   [#00D67F RGB(0,214,127)]{style="color:#00D67F"}
+-   [#F8CBAD RGB(248,203,173)]{style="color:#F8CBAD"}
+-   [#8A2E00 RGB(138,46,0)]{style="color:#8A2E00"}
+-   [#993366 RGB(153,51,102)]{style="color:#993366"}
+-   [#0033CC RGB(0,51,204)]{style="color:#0033CC"}
+-   [#008E55 RGB(0,142,85)]{style="color:#008E55"}
+-   [#45682D RGB(69,104,45)]{style="color:#45682D"}
+-   [#702500 RGB(112,37,0)]{style="color:#702500"}
+
+```{r legend_communities}
+# Los colores se aplicarán a las comunidades de mayor a menor número de perfiles
+communities_color <- c(
+  "#CC66FF",
+  "#92D050",
+  "#00B0F0",
+  "#404040",
+  "#FF9900",
+  "#FF5050",
+  "#00D67F",
+  "#F8CBAD",
+  "#8A2E00",
+  "#993366",
+  "#0033CC",
+  "#008E55",
+  "#45682D",
+  "#702500"
+ )
+num_communities <- length(unique(datos_gephi_cg$modularity_class))
+if (num_communities < max_communities) 
+ {max_communities <- num_communities}
+color_df <- data.frame(color = communities_color) %>%
+  head(max_communities)
+# Filtramos la componente gigante(si la hay) y dejamos el fichero de gephi con solo dos columnas: Label y modularity_class 
+if("componentnumber" %in% names(datos_gephi)) {
+datos_gephi_cg <- datos_gephi #%>%
+  #filter(componentnumber == 0 ) #filtramos nodos de la componente gigante
+}
+# Seleccionar las comunidades con más canales
+ranking_communities <- datos_gephi_cg %>%
+  group_by(modularity_class) %>%
+  summarise(
+    n_user = n(),
+    .group = "drop"
+  ) %>%
+  ungroup() %>%
+  arrange(desc(n_user)) %>%
+  head(max_communities)
+# ordenás las comunidades de más a menos canales
+order_communities <- as.list(ranking_communities$modularity_class)
+datos_gephi_cg$modularity_class <- factor(datos_gephi_cg$modularity_class,levels = order_communities)
+ranking_forward <- datos_gephi_cg %>%
+  filter(!is.na(in_forwards)) %>%
+  filter(modularity_class %in% order_communities) %>%
+  arrange(factor(modularity_class),desc(in_forwards)) %>%
+  select(modularity_class,Label) %>%
+  group_by(modularity_class) %>% 
+  slice(1) %>%
+  ungroup() %>%
+  rename(
+    "community" = "modularity_class",
+    "name_community" ="Label"
+  ) %>%
+  cbind(color_df)
+write_csv(ranking_forward,name_file_communities)
+```

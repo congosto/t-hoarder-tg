@@ -1,0 +1,389 @@
+---
+title: "tm_viz_channels"
+params: 
+    data_root : "../datos/"              # Directorio raiz de los datos
+    dataset_name: "alvise_n2"         # Nombre del dataset
+    base_title : "Red de Alvise"       # Prefijo del título principal de las gráficas
+    msgs : "msgs_dataset.csv"            # Nombre del fichero con los mensajes
+    metadatos : "collected_chats.xlsx"    # Nombre metadatos de los canales
+    min_suscribers: 5000                # Mínimo de suscritores de un canal para ser etiquetado
+    zoom:  FALSE                         # (TRUE/FALSE) TRUE si se desea hacer zoom 
+    min_suscribers_zoom: 5000 # Mínimo de suscritores de un canal para ser etiquetado
+    date_ini_zoom: "YYYY-MM-DD"       # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD 
+    date_end_zoom: "YYYY-MM-DD"       # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD
+    max_overlaps: 30  
+---
+
+```{r setup, 	echo = TRUE,message = FALSE,	warning = FALSE,include=FALSE, cache = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+require("knitr")
+## setting working directory
+opts_knit$set(root.dir = "./")
+```
+
+## Entorno de trabajo
+
+Estos notebooks trabajan con esta estructura de directorios
+
+```         
+dir_raiz ----+-----datos      # Se guardan los datos, cada dataset en un directorio independiente
+             |
+             +-----notebooks # Se guardan los notebooks en R
+             
+```
+
+## Requisitos
+
+-   Disponer de una o varias descargas de canales Telegram
+
+## Importamos librerías
+
+```{r libraries, echo=FALSE, message=FALSE, warning=FALSE}
+
+if (!"tidyverse" %in% installed.packages()) {install.packages("tidyverse")}
+if (!"lubridate" %in% installed.packages()) {install.packages("lubridate")}
+if (!"ggrepel" %in% installed.packages()) {install.packages("ggrepel")}
+if (!"scales" %in% installed.packages()) {install.packages("scales")}
+if (!"tidytext" %in% installed.packages()) {install.packages("tidytext")}
+if (!"tm" %in% installed.packages()) {install.packages("tm")}
+if (!"ggwordcloud" %in% installed.packages()) {install.packages("ggwordcloud")}
+if (!"RColorBrewer" %in% installed.packages()) {install.packages("RColorBrewer")}
+if (!"ggh4x" %in% installed.packages()) {install.packages("ggh4x")}
+if (!"ggtext" %in% installed.packages()) {install.packages("ggtext")}
+if (!"readxl" %in% installed.packages()) {install.packages("readxl")}
+library(tidyverse)       # Suite para datos y gráficos
+library(lubridate)       # Tratamiento de fechas
+library(ggrepel)         # Ubicación no solapada de textos
+library(scales)          # Escalas
+library(tidytext)        # Para manejos de textos
+library(tm)              # Para manejos de textos
+library(ggwordcloud)     # Para crear una nube de palabras
+library(RColorBrewer)    # Paleta de colores
+library(ggh4x)           # Color en las facetas
+library(ggtext)          # Dar color a los textos de las leyendas
+library(readxl)        # Manejo de fechas
+locale(date_names = "en", date_format = "%AD", time_format = "%AT",
+  decimal_mark = ".", grouping_mark = ",", tz = "Europe/Berlin",
+  encoding = "UTF-8", asciify = FALSE)
+Sys.setlocale(category = "LC_ALL", locale = "english")
+
+```
+
+## importamos funciones
+
+```{r echo=FALSE, warning=FALSE}
+source("./utils/tg_share_functions.R")                   # Funciones generales
+source("./utils/tg_share_functions_viz.R")               # Funciones generales de visualización
+source("tg_share_functions_viz_channels.R")     # Funciones de visualización del cuaderno
+```
+
+## Entorno por defecto
+
+```{r environment, echo=FALSE, warning=FALSE}
+## Entorno por defecto. No tocar salvo que se quiera usar otro entorno
+# Guardar los parámetros más usados
+dataset_name <- params$dataset_name         # Nombre del dataset
+base_title <- params$base_title             # Prefijo del título principal de las gráficas
+min_suscribers <- params$min_suscribers # Mínimo de suscriptores del canal para ser etiquetado
+time_zone <-  params$time_zone              # Huso horario
+# Gestionar el entorno de directorios
+data_path <- paste0(params$data_root, dataset_name, "/") # Directorio de datos
+img_path <- paste0(data_path,"/images/" )
+base_name_file_img <- dataset_name                       # Prefijo de las imágenes
+if(file.exists(paste0(data_path, dataset_name, "_classified.csv"))){
+  # Hay ciclo completo
+  name_file_in <- paste0(data_path,dataset_name,"_classified.csv")
+  name_file_communities <- paste0(data_path,dataset_name,"_communities.csv")
+  ARS <- TRUE
+}else{
+  if(file.exists(paste0(data_path, params$msgs))){
+    # Ciclo simplificado
+    name_file_in <- paste0(data_path,params$msgs)
+    ARS = FALSE
+  }else{
+    stop("dateset file does not exist")
+  }
+}
+name_file_metadatos <- paste0(data_path,params$metadatos)
+if(file.exists(img_path)) {
+ cat(paste(img_path,"already exists"))
+} else {
+ dir.create(img_path)
+ cat(paste(img_path,"created"))
+}
+```
+
+## Leemos los datos
+
+```{r read_data, echo=FALSE, warning=FALSE}
+# Leer fichero de mensajes
+print("Leyendo fichero de mensajes")
+if(ARS == TRUE) {
+  # se ha realizado análisis de red, tenemos los msgs clasificados
+  msgs <- read_csv(
+    name_file_in,
+    col_names = TRUE,
+    cols_only( 
+      msg_id = col_character(),
+      channel_name = col_character(),
+      message = col_character(),
+      date = col_datetime(),
+      msg_link = col_character(),
+      forward_msg_link = col_character(),
+      community = col_character()
+    )
+  ) %>%
+  mutate(channel_dest = ifelse(
+    str_detect(forward_msg_link, "^https://t.me/"), 
+      str_extract(forward_msg_link, "(?<=https://t.me/)[^/]+"), 
+      NA)) %>% 
+  group_by(msg_id) %>%
+  slice(1) %>%
+  ungroup() %>%
+  arrange (date)
+  communities <- read_csv(
+    name_file_communities,
+    col_names = TRUE,
+    cols_only(
+      community = col_character(), 
+      name_community = col_character(),
+      color  = col_character()
+    ) 
+  )
+}else{
+   # No se ha realizado análisis de red. Leemos los msgs sin clasificar
+ msgs <- read_csv(
+    name_file_in,
+    col_names = TRUE,
+    cols_only( 
+      msg_id = col_character(),
+      channel_name = col_character(),
+      message = col_character(),
+      date = col_datetime(),
+      msg_link = col_character(),
+      forward_msg_link = col_character()
+    )
+  ) %>%
+  mutate(channel_dest = ifelse(
+    str_detect(forward_msg_link, "^https://t.me/"), 
+      str_extract(forward_msg_link, "(?<=https://t.me/)[^/]+"), 
+      NA)) %>% 
+  group_by(msg_id) %>%
+  slice(1) %>%
+  ungroup() %>%
+  arrange (date)
+}
+print("Leyendo fichero de metadatos")
+metadatos_df <- read_excel (name_file_metadatos) %>%
+  group_by(username) %>%
+  slice(1) %>%
+  ungroup()  %>%
+  select (username,participants_count)
+max_date <- max(msgs$date)
+min_date <- min(msgs$date)
+num_days <- as.numeric(difftime(max_date ,min_date , units = c("days")))
+slot_time <- ifelse(num_days <= 15, "hour", "day")
+```
+
+## Adaptar datos
+
+-   Redonderar por slot time
+-   Estableecr pico máximo par limite eje Y
+-   Establecer relación y color
+
+```{r set_time, warning=FALSE, include=FALSE}
+# Redondear por slot time
+msgs_df <- msgs %>%
+  mutate(channel_dest = ifelse(
+    str_detect(forward_msg_link, "^https://t.me/"), 
+      str_extract(forward_msg_link, "(?<=https://t.me/)[^/]+"), 
+      NA)) %>% 
+  mutate(relation = ifelse(is.na(channel_dest),"original","forward")) %>%
+  left_join(metadatos_df, by = c("channel_name" = "username")) %>%
+  mutate(date = as.POSIXct(floor_date(date),"sec")) %>%
+  mutate(slot_time = as.POSIXct(floor_date(date,slot_time))) %>%
+  arrange(date)
+# Calcular el pico de mensajes del slot de tiempo para dimensionar el eje Y de las gráficas
+msg_peak <- msgs_df %>%
+  group_by(slot_time) %>%
+  summarise(
+     msg_peak =n(),
+     .group = "drop"
+  ) %>%
+  ungroup() %>%
+  arrange(desc(msg_peak)) %>%
+  select(msg_peak) %>%
+  top_n(1) %>%
+  as.integer()
+# Establecer relación y color
+order_relation <- c("original", "forward")
+msgs_df$relation <- factor(msgs_df$relation,levels = order_relation )
+color_relation <- c("original" = "red4", "forward"="purple")
+
+```
+
+## msgs vs. reach
+
+Gráfica de doble escala para representar la proporción de mensajes publicados y alcance obtenido. Estas variables tienen distinto orden de magnitud y por eso se representan con un eje Y doble.
+
+Adicionalmente se etiquetan los canames que estén en el rango definido en el parámetro **min_suscribers**. Este parámetro se adecuará al alcance de la gráfica. Si no aparece ningún canal puede se debido a dos motivos:
+
+-   El valor del parámetro es muy alto y no hay canales con ese número de suscriptores
+
+-   El parámetro es muy bajo y hay tantos canales que cumplen la condición que no se Hay que tener en cuenta:
+
+### Periodo total
+
+```{r msgs_reach_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Llamamos a la función msgs_vs_reach
+p <- msgs_vs_reach(msgs_df, "total",  min_date, max_date, params$min_suscribers, params$max_overlaps ) 
+print(p)
+# Grabar la gráfica en un archivo
+ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_reach_total.png"))
+
+```
+
+### Zoom
+
+```{r msgs_reach_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+if(params$zoom) {
+  # Llamar a la función msgs_vs_reach
+  p <- msgs_vs_reach(msgs_df, "zoom", params$date_ini_zoom, params$date_end_zoom, params$min_suscribers_zoom, params$max_overlaps)
+  print(p)
+  # Grabar la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_reach_zoom.png"))
+}
+```
+
+## msgs vs. forward
+
+### Periodo total
+
+```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Llamamos a la función msgs_vs_forward
+p <- msgs_vs_forward(msgs_df , "total",  min_date, max_date) 
+print(p)
+# Grabar la gráfica en un archivo
+ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_total.png"))
+
+```
+
+### Zoom msgs_vs_forward
+
+```{r msgs_vs_forward_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+if(params$zoom) {
+  # Llamamos a la función msgs_vs_forward
+  p <- msgs_vs_forward(msgs_df , "zoom",  params$date_ini_zoom, params$date_end_zoom) 
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_zoom.png"))
+}
+```
+
+## Referencias a dominios
+
+### Periodo total
+
+```{r spread_urls_total, echo=FALSE, fig.height=6, fig.width=11, message=FALSE, warning=FALSE, paged.print=FALSE}
+p <- accumulated_sites(msgs_df, "total", min_date, max_date)
+print(p)
+# Grabar la gráfica en un archivo
+ggsave(filename = paste0(img_path,base_name_file_img,"_cumulative_sites_total.png"))
+
+
+```
+
+### Zoom
+
+```{r spread_urls_zoom, echo=FALSE, fig.height=6, fig.width=11, message=FALSE, warning=FALSE, paged.print=FALSE}
+if(params$zoom) {
+  p <- accumulated_sites(msgs_df, "zoom", params$date_ini_zoom, params$date_end_zoom)
+  print(p)
+  # Grabar la gráfica en un archivo
+  ggsave(filename = paste0(img_path,base_name_file_img,"_cumulative_sites_zoom.png"))
+}
+
+
+```
+
+## msgs by community
+
+Los siguientes scripts visualizan la evolución temporal con ARS. **Solo se ejecutan si se han clasificado los msgs**
+
+Requiere haber realizado los pasos previos:
+
+-   Generar un fichero gdf con las relaciones de forward para Gephi mediante el notebook tg_summarize_channels.Rmd
+-   Generar un grafo con Gephi y exportar su tabla de datos
+-   Clasificar los msgs con el notebook tg_classify_msgs.Rmd
+
+![ciclo Análisis ARS: Evolución temporal con AR](https://github.com/congosto/congosto.github.io/raw/master/ciclo_ARS__t-hoarder-tg.JPG)
+
+-   Se limita el número de comunidades a catorce, cifra que creo que es suficiente en la mayoría de los casos.
+
+-   Por compatibilidad con el análisis de ARS, se han elegido los ocho colores que Gephi asigna por defecto como lo primeros ocho colores y se han añadido seis más hasta completar los catorce.
+
+Colores por defecto:
+
+-   [#CC66FF RGB(204,102,255)]{style="color:#CC66FF"}
+-   [#92D050 RGB(146,208,80)]{style="color:#92D050"}
+-   [#00B0F0 RGB(0,176,240)]{style="color:#00B0F0"}
+-   [#404040 RGB(64,64,64)]{style="color:#404040"}
+-   [#FF9900 RGB(255,153,0)]{style="color:#FF9900"}
+-   [#FF5050 RGB(255,80,80)]{style="color:#FF5050"}
+-   [#00D67F RGB(0,214,127)]{style="color:#00D67F"}
+-   [#F8CBAD RGB(248,203,173)]{style="color:#F8CBAD"}
+-   [#8A2E00 RGB(138,46,0)]{style="color:#8A2E00"}
+-   [#993366 RGB(153,51,102)]{style="color:#993366"}
+-   [#0033CC RGB(0,51,204)]{style="color:#0033CC"}
+-   [#008E55 RGB(0,142,85)]{style="color:#008E55"}
+-   [#45682D RGB(69,104,45)]{style="color:#45682D"}
+-   [#702500 RGB(112,37,0)]{style="color:#702500"}
+
+### Periodo total msgs-community
+
+```{r msgs_by_community_total, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, paged.print=FALSE}
+if(ARS == TRUE) {
+  # Llamamos a la función msgs_by_community
+  p <- msgs_by_community(msgs_df , "total", min_date, max_date, communities) 
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_group_total.png"))
+}
+
+```
+
+### Zoom msgs-community
+
+```{r msgs_by_community_zoom, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, fig.width=8, fig.height=5}
+if(ARS & params$zoom) {
+  # Llamamos a la función msgs_vs_RTs
+  p <- msgs_by_community(msgs_df , "zoom", params$date_ini_zoom, params$date_end_zoom, communities )
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_group_zoom.png"))
+}
+```
+
+## Contenido de los msgs por comunidades
+
+### Periodo total
+
+```{r contenido_msgs_by_community_total, echo=FALSE, fig.height=9, fig.width=9, message=FALSE, warning=FALSE}
+if(ARS ) {
+  p <-words_frequency_by_community(msgs_df, "Total", min_date, max_date, communities)
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_words_frequency_by_group.png"))
+}
+```
+
+### Zoom
+
+```{r contenido_msgs_by_community_zoom, echo=FALSE, fig.height=15, fig.width=9, message=FALSE, warning=FALSE}
+if(ARS & params$zoom) {
+  p <-words_frequency_by_community(msgs_df, "zoom",  params$date_ini_zoom, params$date_end_zoom, communities)
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_words_frequency_by_group.png"))
+}
+```
