@@ -2,15 +2,15 @@
 title: "tm_viz_channels"
 params: 
     data_root : "../datos/"              # Directorio raiz de los datos
-    dataset_name: "alvise_n2"         # Nombre del dataset
-    base_title : "Red de Alvise"       # Prefijo del título principal de las gráficas
+    dataset_name: "xxxxxxxx"             # Nombre del dataset
+    base_title : "xxxxxxxx"              # Prefijo del título principal de las gráficas
     msgs : "msgs_dataset.csv"            # Nombre del fichero con los mensajes
-    metadatos : "collected_chats.xlsx"    # Nombre metadatos de los canales
-    min_suscribers: 5000                # Mínimo de suscritores de un canal para ser etiquetado
+    metadatos : "collected_chats.xlsx"   # Nombre metadatos de los canales
+    min_suscribers: 5000                 # Mínimo de suscritores de un canal para ser etiquetado
     zoom:  FALSE                         # (TRUE/FALSE) TRUE si se desea hacer zoom 
-    min_suscribers_zoom: 5000 # Mínimo de suscritores de un canal para ser etiquetado
-    date_ini_zoom: "YYYY-MM-DD"       # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD 
-    date_end_zoom: "YYYY-MM-DD"       # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD
+    min_suscribers_zoom: 5000            # Mínimo de suscritores de un canal para ser etiquetado
+    date_ini_zoom: "YYYY-MM-DD"          # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD 
+    date_end_zoom: "YYYY-MM-DD"          # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD
     max_overlaps: 30  
 ---
 
@@ -28,7 +28,7 @@ Estos notebooks trabajan con esta estructura de directorios
 ```         
 dir_raiz ----+-----datos      # Se guardan los datos, cada dataset en un directorio independiente
              |
-             +-----notebooks # Se guardan los notebooks en R
+             +-----notebooks  # Se guardan los notebooks en R
              
 ```
 
@@ -74,7 +74,7 @@ Sys.setlocale(category = "LC_ALL", locale = "english")
 ```{r echo=FALSE, warning=FALSE}
 source("./utils/tg_share_functions.R")                   # Funciones generales
 source("./utils/tg_share_functions_viz.R")               # Funciones generales de visualización
-source("tg_share_functions_viz_channels.R")     # Funciones de visualización del cuaderno
+source("./utils/tg_share_functions_viz_channels.R")     # Funciones de visualización del cuaderno
 ```
 
 ## Entorno por defecto

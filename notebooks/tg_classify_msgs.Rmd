@@ -5,11 +5,11 @@ editor_options:
   markdown: 
     wrap: 72
 params:
-    data_root : "../datos/"  #directorio raiz de los datos
-    dataset_name : "alvise_n2"            # Nombre del dataset
+    data_root : "../datos/"              # Directorio raiz de los datos
+    dataset_name : "xxxxxxxx"            # Nombre del dataset
     msgs : "msgs_dataset.csv"            # Nombre del dataset
-    file_gephi: "alvise_n2_nodos.csv"            # Nombre del fichero que se ha exportado de gephi
-    max_communities: 2                    # El valor máximo es 14 pero se puede poner un número menor
+    file_gephi: "alvise_n2_nodos.csv"    # Nombre del fichero que se ha exportado de gephi
+    max_communities: 2                   # El valor máximo es 14 pero se puede poner un número menor
 ---
 
 ```{r setup, 	echo = TRUE,message = FALSE,	warning = FALSE,include=FALSE, cache = FALSE}
@@ -27,7 +27,7 @@ Estos notebooks trabajan con esta estructura de directorios
 ```         
 dir_raiz ----+-----datos      # Se guardan los datos, cada dataset en un directorio independiente
              |
-             +-----notebooks # Se guardan los notebooh en R
+             +-----notebooks  # Se guardan los notebooh en R
 ```
 
 ## Ciclo de Análisis ARS: Clasificar msgs por ARS
