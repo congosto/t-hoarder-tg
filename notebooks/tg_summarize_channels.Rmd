@@ -20,15 +20,16 @@ Estos notebooks trabajan con esta estructura de directorios
 
 El directorio de datos por defecto relativo a notebooks y será ../datos/ pero se puede poner en los parámetros un directorio absoluto
 
-    dir_raiz ----+-----datos      # Se guardan los datos, cada dataset en un directorio independiente
-                 |
-                 +-----notebooks  # Se guardan los notebooks en R
-                 
+```         
+dir_raiz ----+-----datos      # Se guardan los datos, cada dataset en un directorio independiente
+             |
+             +-----notebooks  # Se guardan los notebooks en R
+             
+```
 
 ## Requisitos
 
 -   Disponer de una o varias descargas de channels Telegram
-
 
 ## Importamos librerías
 
@@ -105,7 +106,7 @@ metadatos_df <- read_excel (name_file_metadatos) %>%
 
 ## Extracción de datos
 
-### channels 
+### channels
 
 ```{r extraet_channels, warning=FALSE}
 print("Extraer channels")
@@ -226,7 +227,6 @@ nodos <- metadatos_df %>%
 
 ### Extraer aristas
 
-
 ```{r extraer_aristas}
 # Extraer referencia de channel
 print("Obteniendo aristas ")
@@ -240,12 +240,9 @@ aristas <- msgs_df %>%
     .groups = "drop"
   ) 
 
-``` 
+```
 
-
-
-
-## Generar el gdf
+### Generar el gdf
 
 ```{r write_file_gdf}
 # generamos la cabecera de los nodos y arcos

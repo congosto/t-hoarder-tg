@@ -198,6 +198,7 @@ msgs_df <- msgs %>%
     str_detect(forward_msg_link, "^https://t.me/"), 
       str_extract(forward_msg_link, "(?<=https://t.me/)[^/]+"), 
       NA)) %>% 
+  mutate (channel_dest = ifelse(channel_name == channel_dest,NA,channel_dest)) %>%
   mutate(relation = ifelse(is.na(channel_dest),"original","forward")) %>%
   left_join(metadatos_df, by = c("channel_name" = "username")) %>%
   mutate(date = as.POSIXct(floor_date(date),"sec")) %>%

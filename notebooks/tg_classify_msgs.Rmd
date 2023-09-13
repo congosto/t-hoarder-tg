@@ -8,8 +8,8 @@ params:
     data_root : "../datos/"              # Directorio raiz de los datos
     dataset_name : "xxxxxxxx"            # Nombre del dataset
     msgs : "msgs_dataset.csv"            # Nombre del dataset
-    file_gephi: "alvise_n2_nodos.csv"    # Nombre del fichero que se ha exportado de gephi
-    max_communities: 2                   # El valor máximo es 14 pero se puede poner un número menor
+    file_gephi: "xxxxxxxx_nodos.csv"     # Nombre del fichero que se ha exportado de gephi
+    max_communities: 9                   # El valor máximo es 14 pero se puede poner un número menor
 ---
 
 ```{r setup, 	echo = TRUE,message = FALSE,	warning = FALSE,include=FALSE, cache = FALSE}
@@ -35,8 +35,8 @@ dir_raiz ----+-----datos      # Se guardan los datos, cada dataset en un directo
 ![ciclo Análisis ARS: Clasificar
 msgs](https://github.com/congosto/congosto.github.io/raw/master/ciclo_ARS_classify.jpg)
 
-Este script clasifica los msgs según la "modularity class" calculada
-con Gephi. Para hacer la clasificación se necesitan:
+Este script clasifica los msgs según la "modularity class" calculada con
+Gephi. Para hacer la clasificación se necesitan:
 
 -   El dataset con los msgs
 -   Un fichero exportado de Gephi con los datos de red de los canales
@@ -108,9 +108,6 @@ datos_gephi <- read_csv(
   )
 )
 ```
-
-## Clasificamos msgs
-
 
 ## Clasificamos msgs
 
