@@ -49,12 +49,12 @@ Es sencillo y rápido. En solo dos pasos podemos averiguar aspectos importantes 
 
 ![Ciclo Análisis simplificado](https://github.com/congosto/congosto.github.io/raw/master/ciclo_simplificado_t-hoarder-tg.JPG)
 
--   Fase 1: notebooks de descarga de tweets
+-   Fase 1: notebook en Python de descarga de Telegam
 
     -   Descarga de los canales con telegram-tracker.
     -   Copiar o mover la descarga del canal o canales a un directorio creado debajo del directorio "datos"
 
--   Fase 2: Notebooks de visualización
+-   Fase 2: Notebooks en R de visualización
 
     -   Visualizar los datos con tg_viz_channels.Rmd
     -   Extraer metadatos con tg_summarize_channels.Rmd
@@ -65,22 +65,22 @@ Es más elaborado pero permite un análisis en profundidad de la propagación al
 
 ![Ciclo Análisis completo](https://github.com/congosto/congosto.github.io/raw/master/ciclo_ARS__t-hoarder-tg.JPG)
 
--   Fase 1: notebooks de descarga de tweets
+-   Fase 1: notebook en Python de descarga de Telegam
 
     -   Descarga de los canales con telegram-tracker.
     -   Copiar o mover la descarga del canal o canales a un directorio creado debajo del directorio "datos"
 
--   Fase 2: notebook de generación de un fichero gdf para gephi
+-   Fase 2: notebook en R de generación de un fichero gdf para gephi
 
     -   tg_summarize_channels.Rmd obtiene de los datos descargados un fichero gdf que describe los nodos (canales) y las conexiones por forward
 
 -   Fase 3: Análisis de red en Gephi, con cálculo de la modularidad. Se exportarán de los datos de los nodos a un fichero csv
 
--   Fase 4: notebook para la incorporación de la clasificación de usuarios de gephi a los tweets
+-   Fase 4: notebook en R para la incorporación de la clasificación de usuarios de gephi a los tweets
 
     -   tg_classify_msgs.Rmd clasifica los mensajes en función de la clasificación de usuarios de Gephi
 
--   Fase 5: Notebooks de visualización
+-   Fase 5: Notebooks en R de visualización
 
     -   Visualizar los datos con tg_viz_channels.Rmd para visualizar propagación de mensajes
 
