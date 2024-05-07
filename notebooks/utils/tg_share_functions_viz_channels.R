@@ -378,14 +378,16 @@ accumulated_sites <-  function(df, periodo, ini_date, end_date) {
           " ref.)")
       ), 
       vjust = 1,
+      hjust = 0,
       size = 4,
-      nudge_x =  expand_time(min_date,max_date,2), # Ajuste eje x
+      nudge_x =  expand_time(min_date,max_date, 2), # Ajuste eje x
       nudge_y = 0.005,  # Ajuste eje y
-      direction = "y",
-      max.overlaps = 30,
+      direction="y",
+      max.overlaps=36,
       segment.size = 0.5,
+      segment.hjust = 0,
       segment.linetype = 2,
-      show.legend =FALSE
+      show.legend = FALSE
     )+
     scale_x_datetime(
       limits=limit_x,
