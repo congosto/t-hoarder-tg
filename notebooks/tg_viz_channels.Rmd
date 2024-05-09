@@ -1,19 +1,18 @@
 ---
 title: "tm_viz_channels"
-params:
-  data_root: "../datos/"
-  dataset_name: "xxxxxxxx"
-  base_title: "xxxxxxx"
-  msgs: "msgs_dataset.csv"
-  metadatos: "collected_chats.xlsx"
-  min_suscribers: 5000
-  zoom: FALSE
-  min_suscribers_zoom: 5000
-  date_ini_zoom: "YYYY-MM-DD"
-  date_end_zoom: "YYYY-MM-DD"
-  max_overlaps: 30
+params: 
+    data_root : "../datos/"              # Directorio raiz de los datos
+    dataset_name: "xxxxxxxx"             # Nombre del dataset
+    base_title : "xxxxxxx"               # Prefijo del título principal de las gráficas
+    msgs : "msgs_dataset.csv"            # Nombre del fichero con los mensajes
+    metadatos : "collected_chats.xlsx"   # Nombre metadatos de los canales
+    min_suscribers: 5000                 # Mínimo de suscritores de un canal para ser etiquetado
+    zoom:  FALSE                         # (TRUE/FALSE) TRUE si se desea hacer zoom 
+    min_suscribers_zoom: 5000            # Mínimo de suscritores de un canal para ser etiquetado
+    date_ini_zoom: "YYYY-MM-DD"          # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD 
+    date_end_zoom: "YYYY-MM-DD"          # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD
+    max_overlaps: 30  
 ---
-
 ```{r setup, 	echo = TRUE,message = FALSE,	warning = FALSE,include=FALSE, cache = FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 require("knitr")
