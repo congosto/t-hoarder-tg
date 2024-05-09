@@ -82,13 +82,13 @@ msgs_vs_reach <- function(df, periodo,  ini_date, end_date, min_suscribers, max_
     #Ajustamos la doble escala
     scale_y_continuous(
       name = paste("Num. msgs per",slot_time), 
-      labels = label_number_si(),
+      labels = label_number(),
       limits= c(0,limit_y*2 ),
       expand= c(0,0),
       sec.axis = sec_axis(
         trans=(~ . * ajuste_escala), 
         name = paste("Reach per", slot_time),
-        labels = label_number_si() 
+        labels = label_number() 
       )
     ) +
     # Aplicamos color
@@ -225,13 +225,13 @@ msgs_vs_forward <- function(df, periodo,  ini_date, end_date) {
     # Ajustamos la doble escala
     scale_y_continuous(
       name = paste("Num. Original msgs per",slot_time), 
-      labels = label_number_si(),
+      labels = label_number(),
       limits= c(0,limit_y*1.4),
       expand= c(0,0),
       sec.axis = sec_axis(
         trans=(~ . * ajuste_escala), 
         name = paste("forward per",slot_time),
-        labels = label_number_si() )
+        labels = label_number() )
     ) +
     # Aplicamos color
     scale_color_manual(values = my_color) +
@@ -303,7 +303,7 @@ msgs_by_community <-  function(df, periodo,  ini_date, end_date, communities) {
     scale_y_continuous(
       limits= c(0,msg_peak*1.1),
       expand= c(0,0),
-      labels = label_number_si()
+      labels = label_number()
     ) +
     #coloreamos según el fichero
     scale_fill_manual(
@@ -395,7 +395,7 @@ accumulated_sites <-  function(df, periodo, ini_date, end_date) {
       date_labels = format_time(ini_date, end_date)
     ) +
     scale_y_continuous(
-     labels = label_number_si(),
+     labels = label_number(),
     limits= c(0,limit_y*1.3 ),
     expand= c(0,0)
     ) +
@@ -558,7 +558,7 @@ spread_topics_msgs <- function(df, ini_date, end_date, topics, annotations_names
       date_labels = format_time(ini_date, end_date)
     ) +
     scale_y_continuous(
-      labels = label_number_si(),
+      labels = label_number(),
       limits= c(0,limit_y*1.3 ),
       expand= c(0,0)
     ) +
@@ -672,7 +672,7 @@ spread_topics_msgs_by_community <- function(df, ini_date, end_date, communities,
       date_labels = format_time(ini_date, end_date)
     ) +
     scale_y_continuous(
-      labels = label_number_si(),
+      labels = label_number(),
       limits= c(0,limit_y*1.3 ),
       expand= c(0,0)
     ) +
