@@ -6,9 +6,9 @@ editor_options:
     wrap: 72
 params:
     data_root : "../datos/"              # Directorio raiz de los datos
-    dataset_name : "xxxxxxxx"            # Nombre del dataset
+    dataset_name : "ruido"            # Nombre del dataset
     msgs : "msgs_dataset.csv"            # Nombre del dataset
-    file_gephi: "xxxxxxxx_nodos.csv"     # Nombre del fichero que se ha exportado de gephi
+    file_gephi: "ruido_nodos.csv"     # Nombre del fichero que se ha exportado de gephi
     max_communities: 9                   # El valor máximo es 14 pero se puede poner un número menor
 ---
 

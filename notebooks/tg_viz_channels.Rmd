@@ -2,8 +2,8 @@
 title: "tm_viz_channels"
 params: 
     data_root : "../datos/"              # Directorio raiz de los datos
-    dataset_name: "xxxxxxxx"             # Nombre del dataset
-    base_title : "xxxxxxxx"              # Prefijo del título principal de las gráficas
+    dataset_name: "ruido"             # Nombre del dataset
+    base_title : "Ruido"              # Prefijo del título principal de las gráficas
     msgs : "msgs_dataset.csv"            # Nombre del fichero con los mensajes
     metadatos : "collected_chats.xlsx"   # Nombre metadatos de los canales
     min_suscribers: 5000                 # Mínimo de suscritores de un canal para ser etiquetado
@@ -188,7 +188,7 @@ slot_time <- ifelse(num_days <= 15, "hour", "day")
 ## Adaptar datos
 
 -   Redonderar por slot time
--   Estableecr pico máximo par limite eje Y
+-   Establecer pico máximo par limite eje Y
 -   Establecer relación y color
 
 ```{r set_time, warning=FALSE, include=FALSE}
