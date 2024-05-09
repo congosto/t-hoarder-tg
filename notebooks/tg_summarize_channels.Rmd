@@ -2,7 +2,7 @@
 title: "tg_summarize_channels"
 params: 
     data_root : "../datos/"               # Directorio raiz de los datos
-    dataset_name: "rubnpulido_n2"              # Nombre del dataset (también será el nombre del directorio)
+    dataset_name: "xxxxxxxx"              # Nombre del dataset (también será el nombre del directorio)
     msgs : "msgs_dataset.csv"             # Nombre del fichero con los mensajes
     metadatos : "collected_chats.xlsx"    # Nombre del fichero con los metadatos de los channels
 ---
