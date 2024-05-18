@@ -186,7 +186,7 @@ msgs_vs_forward <- function(df, periodo,  ini_date, end_date) {
       aes( x = slot_time, y = num_msgs/ajuste_escala, color="forward"),
       size =1.3)+
     # Anotamos el máximo de msgs originales/hora
-    geom_text(
+    geom_text_repel(
       data = msgs_original_df %>% top_n(1, num_msgs),
       aes(
         x = slot_time, y = num_msgs * 1.1, 
@@ -202,7 +202,7 @@ msgs_vs_forward <- function(df, periodo,  ini_date, end_date) {
       show.legend = FALSE
     ) +
     # Anotamos el máximo de forward/hora
-    geom_text(
+    geom_text_repel(
       data = msgs_forward_df %>%  top_n(1, num_msgs),
       aes(
         x = slot_time, y = num_msgs/ajuste_escala *1.3, 
@@ -220,13 +220,13 @@ msgs_vs_forward <- function(df, periodo,  ini_date, end_date) {
     # Ajustamos la escala de tiempo
     scale_x_datetime(
       date_labels = format_time(ini_date, end_date),
-      date_breaks = time_scale(ini_date, end_date)
+     date_breaks = time_scale(ini_date, end_date)
     ) +
     # Ajustamos la doble escala
     scale_y_continuous(
       name = paste("Num. Original msgs per",slot_time), 
       labels = label_number(scale_cut = cut_short_scale()),
-      limits= c(0,limit_y*1.4),
+      #limits= c(0,limit_y*1.4),
       expand= c(0,0),
       sec.axis = sec_axis(
         trans=(~ . * ajuste_escala), 
@@ -250,7 +250,7 @@ msgs_vs_forward <- function(df, periodo,  ini_date, end_date) {
       axis.text.y = element_text(color = "steelblue4"),
       axis.text.y.right = element_text(color = "red4")
     )
-  return(p)
+   return(p)
 }
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
