@@ -1,6 +1,6 @@
 ---
 title: "tg_summarize_channels"
-params: 
+params:
     data_root : "../datos/"               # Directorio raiz de los datos
     dataset_name: "xxxxxxxx"              # Nombre del dataset (también será el nombre del directorio)
     msgs : "msgs_dataset.csv"             # Nombre del fichero con los mensajes
@@ -75,19 +75,25 @@ msgs_df <- read_csv(
   name_file_msgs,
   col_names = TRUE,
   cols_only( 
+    signature = col_character(),
     msg_id = col_character(),
     channel_name = col_character(),
     message = col_character(),
     date = col_datetime(),
     msg_link = col_character(),
-    forward_msg_link = col_character()
+    forward_msg_link = col_character(),
+    from_channel_name = col_character()
   )
 ) %>%
   mutate(channel_dest = ifelse(
     str_detect(forward_msg_link, "^https://t.me/"), 
       str_extract(forward_msg_link, "(?<=https://t.me/)[^/]+"), 
       NA)) %>% 
-  group_by(msg_id) %>%
+  mutate(channel_dest_msg = ifelse(
+    str_detect(message, "https://t.me/"), 
+      str_extract(message, "(?<=https://t.me/)[\\w]+"), 
+      NA)) %>% 
+  group_by(signature) %>%
   slice(1) %>%
   ungroup() %>%
   arrange (date)
@@ -197,7 +203,7 @@ write_csv(resumen, name_file_fechas_channel)
 
 ## Generar gdf
 
-### Obtener nodos
+### Obtener nodos 
 
 ```{r extraer_nodos}
 print("Obteniendo nodos ")
@@ -215,14 +221,34 @@ forward_out <- msgs_df %>%
     count_forwards_out = n(),
     .groups = "drop"
   ) 
+mentions_in <- msgs_df %>%
+  filter (!is.na(channel_dest_msg)) %>%
+  group_by(channel_dest_msg) %>% 
+  summarize(
+    count_mentions_in = n(),
+    .groups = "drop"
+  ) 
+mentions_out <- msgs_df %>%
+  filter (!is.na(channel_dest_msg)) %>%
+  group_by(channel_name) %>% 
+  summarize(
+    count_mentions_out = n(),
+    .groups = "drop"
+  ) 
 nodos <- metadatos_df %>%
   left_join(forward_in , by = c("username" = "channel_dest")) %>%
   left_join(forward_out , by = c("username" = "channel_name")) %>%
+  left_join(mentions_in , by = c("username" = "channel_dest_msg")) %>%
+  left_join(mentions_out , by = c("username" = "channel_name")) %>%
   mutate (count_forwards_in = ifelse(!is.na(count_forwards_in),count_forwards_in, 0)) %>%
   mutate (count_forwards_out = ifelse(!is.na(count_forwards_out),count_forwards_out, 0 )) %>%
   mutate (count_forward_tot = count_forwards_in + count_forwards_out ) %>%
+  mutate (count_mentions_in = ifelse(!is.na(count_mentions_in),count_mentions_in, 0)) %>%
+  mutate (count_mentions_out = ifelse(!is.na(count_mentions_out),count_mentions_out, 0 )) %>%
+  mutate (count_mentions_tot = count_mentions_in + count_mentions_out ) %>%
+  filter (count_forward_tot > 0 | count_mentions_tot > 0) %>%
   arrange (desc(count_forward_tot)) %>%
-  select (username, count_forward_tot, count_forwards_in, count_forwards_out, date, created_year, participants_count, log_participants,fake, verified)   # Cambiar orden de las columnas
+  select (username, count_forward_tot, count_forwards_in, count_forwards_out, count_mentions_tot, count_mentions_in, count_mentions_out,date, created_year, participants_count, log_participants,fake, verified)   # Cambiar orden de las columnas
 ```
 
 ### Extraer aristas
@@ -230,27 +256,38 @@ nodos <- metadatos_df %>%
 ```{r extraer_aristas}
 # Extraer referencia de channel
 print("Obteniendo aristas ")
-aristas <- msgs_df %>%
+aristas_forward <- msgs_df %>%
   filter (!is.na(channel_dest)) %>%
   filter (channel_name != channel_dest) %>%
   mutate (directed ="TRUE") %>%
-  group_by(channel_name, channel_dest,directed) %>% 
+  group_by(channel_name, channel_dest, directed) %>% 
   summarize(
     count = n(),
     .groups = "drop"
-  ) 
-
+  ) %>%
+  ungroup()
+aristas_mention <- msgs_df %>%
+  filter (!is.na(channel_dest_msg)) %>%
+  filter (channel_name != channel_dest) %>%
+  mutate (directed ="TRUE") %>%
+  group_by(channel_name, channel_dest, directed) %>% 
+  summarize(
+    count = n(),
+    .groups = "drop"
+  ) %>%
+  ungroup()
 ```
 
 ### Generar el gdf
 
 ```{r write_file_gdf}
 # generamos la cabecera de los nodos y arcos
-head_nodos <- "nodedef> name VARCHAR, tot_forward INT, in_forwards INT, out_forwards INT, date_since VARCHAR, year_since VARCHAR, participants_count INT, log_participants INT,  fake BOOLEAN, verified BOOLEAN"
-head_arcos <- "edgedef>node1 VARCHAR,node2 VARCHAR, directed BOOLEAN, weight INT"  
+head_nodos <- "nodedef> name VARCHAR, tot_forwards INT, in_forwards INT, out_forwards INT, tot_mentions INT, in_mentions INT, out_mentions INT,date_since VARCHAR, year_since VARCHAR, participants_count INT, log_participants INT,  fake BOOLEAN, verified BOOLEAN"
+head_arcos <- "edgedef>node1 VARCHAR,node2 VARCHAR,  directed BOOLEAN, weight INT"  
 # escribimos el fichero gdf
 write(head_nodos, name_file_gdf)
 write_csv(nodos, name_file_gdf, append = TRUE, col_names = FALSE)
 write(head_arcos, name_file_gdf, append = TRUE,)
-write_csv(aristas, name_file_gdf, append = TRUE, col_names = FALSE)
+write_csv(aristas_forward, name_file_gdf, append = TRUE, col_names = FALSE)
+write_csv(aristas_mention, name_file_gdf, append = TRUE, col_names = FALSE)
 ```
