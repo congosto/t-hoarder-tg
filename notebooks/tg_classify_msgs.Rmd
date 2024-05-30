@@ -83,15 +83,20 @@ msgs_df <- read_csv(
   name_file_in,
   col_names = TRUE,
   cols_only( 
+    signature = col_character(),
     msg_id = col_character(),
     channel_name = col_character(),
     message = col_character(),
     date = col_datetime(),
     msg_link = col_character(),
-    forward_msg_link  = col_character()
+    forward_msg_link  = col_character(),
+    url_description = col_character(),
+    views = col_number(),
+    number_replies = col_number(),
+    number_forwards = col_number()
   ) 
 ) %>%
-  group_by(msg_id) %>%
+  group_by(signature) %>%
   slice(1) %>%
   ungroup() %>%
   arrange (date)
@@ -101,7 +106,8 @@ datos_gephi <- read_csv(
   col_names = TRUE,
   cols_only(
     Label = col_character(), 
-    tot_forward = col_number(),
+    tot_forwards = col_number(),
+    tot_mentions = col_number(),
     modularity_class = col_character(),
     componentnumber = col_number(),
     in_forwards = col_number()
@@ -120,7 +126,7 @@ datos_gephi <- datos_gephi #%>%
   #filter(componentnumber == 0 ) #filtar nodos de la componente gigante
 }
 datos_gephi_cg <- datos_gephi %>%
-  filter(tot_forward >0) %>%
+  filter(tot_forwards >0 | tot_mentions > 0) %>%
   select(Label,modularity_class, in_forwards)  #seleccionar datos para la clasificación
 
 msgs_clasificados <- msgs_df %>%
