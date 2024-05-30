@@ -12,7 +12,10 @@ params:
     date_ini_zoom: "YYYY-MM-DD"          # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD 
     date_end_zoom: "YYYY-MM-DD"          # (Solo si zoom es TRUE) Fecha de inicio del zoom, formato YYYY-MM-DD
     max_overlaps: 30  
+    topics: FALSE                        # Opción para buscar topics en los mensajes
+    file_topics: "xxxxxx.csv"            # Nombre del fichero con los topics
 ---
+
 ```{r setup, 	echo = TRUE,message = FALSE,	warning = FALSE,include=FALSE, cache = FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 require("knitr")
@@ -123,12 +126,18 @@ if(ARS == TRUE) {
     name_file_in,
     col_names = TRUE,
     cols_only( 
+      signature = col_character(),
       msg_id = col_character(),
       channel_name = col_character(),
       message = col_character(),
       date = col_datetime(),
       msg_link = col_character(),
       forward_msg_link = col_character(),
+      from_channel_name = col_character(),
+      url_description = col_character(),
+      views = col_integer(),
+      number_replies = col_integer(),
+      number_forwards = col_integer(),
       community = col_character()
     )
   ) %>%
@@ -136,7 +145,7 @@ if(ARS == TRUE) {
     str_detect(forward_msg_link, "^https://t.me/"), 
       str_extract(forward_msg_link, "(?<=https://t.me/)[^/]+"), 
       NA)) %>% 
-  group_by(msg_id) %>%
+  group_by(signature) %>%
   slice(1) %>%
   ungroup() %>%
   arrange (date)
@@ -155,19 +164,25 @@ if(ARS == TRUE) {
     name_file_in,
     col_names = TRUE,
     cols_only( 
+      signature = col_character(),
       msg_id = col_character(),
       channel_name = col_character(),
       message = col_character(),
       date = col_datetime(),
       msg_link = col_character(),
-      forward_msg_link = col_character()
+      forward_msg_link = col_character(),
+      from_channel_name = col_character(),
+      url_description = col_character(),
+      views = col_integer(),
+      number_replies = col_integer(),
+      number_forwards = col_integer()
     )
   ) %>%
   mutate(channel_dest = ifelse(
     str_detect(forward_msg_link, "^https://t.me/"), 
       str_extract(forward_msg_link, "(?<=https://t.me/)[^/]+"), 
       NA)) %>% 
-  group_by(msg_id) %>%
+  group_by(signature) %>%
   slice(1) %>%
   ungroup() %>%
   arrange (date)
@@ -178,6 +193,9 @@ metadatos_df <- read_excel (name_file_metadatos) %>%
   slice(1) %>%
   ungroup()  %>%
   select (username,participants_count)
+if(params$topics == TRUE){
+  topics <- read_csv(paste0(data_path,params$file_topics), show_col_types = FALSE)
+}
 max_date <- max(msgs$date)
 min_date <- min(msgs$date)
 num_days <- as.numeric(difftime(max_date ,min_date , units = c("days")))
@@ -222,7 +240,7 @@ color_relation <- c("original" = "red4", "forward"="purple")
 
 ```
 
-## msgs vs. reach
+## msgs vs. views
 
 Gráfica de doble escala para representar la proporción de mensajes publicados y alcance obtenido. Estas variables tienen distinto orden de magnitud y por eso se representan con un eje Y doble.
 
@@ -236,7 +254,7 @@ Adicionalmente se etiquetan los canames que estén en el rango definido en el pa
 
 ```{r msgs_reach_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Llamamos a la función msgs_vs_reach
-p <- msgs_vs_reach(msgs_df, "total",  min_date, max_date, params$min_suscribers, params$max_overlaps ) 
+p <- msgs_vs_views(msgs_df, "total",  min_date, max_date, params$min_suscribers, params$max_overlaps ) 
 print(p)
 # Grabar la gráfica en un archivo
 ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_reach_total.png"))
@@ -248,32 +266,57 @@ ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_reach_total.png"))
 ```{r msgs_reach_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 if(params$zoom) {
   # Llamar a la función msgs_vs_reach
-  p <- msgs_vs_reach(msgs_df, "zoom", params$date_ini_zoom, params$date_end_zoom, params$min_suscribers_zoom, params$max_overlaps)
+  p <- msgs_vs_views(msgs_df, "zoom", params$date_ini_zoom, params$date_end_zoom, params$min_suscribers_zoom, params$max_overlaps)
   print(p)
   # Grabar la gráfica en un archivo
   ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_reach_zoom.png"))
 }
 ```
 
-## msgs vs. forward
+## msgs vs. forward send
 
 ### Periodo total
 
 ```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Llamamos a la función msgs_vs_forward
-p <- msgs_vs_forward(msgs_df , "total",  min_date, max_date) 
+p <- msgs_vs_forward_out(msgs_df , "total",  min_date, max_date) 
 print(p)
 # Grabar la gráfica en un archivo
 ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_total.png"))
 
 ```
 
-### Zoom msgs_vs_forward
+### Zoom msgs_vs_forward send
 
 ```{r msgs_vs_forward_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 if(params$zoom) {
   # Llamamos a la función msgs_vs_forward
-  p <- msgs_vs_forward(msgs_df , "zoom",  params$date_ini_zoom, params$date_end_zoom) 
+  p <- msgs_vs_forward_out(msgs_df , "zoom",  params$date_ini_zoom, params$date_end_zoom) 
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_zoom.png"))
+}
+```
+
+## msgs vs. forward received
+
+### Periodo total
+
+```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Llamamos a la función msgs_vs_forward
+p <- msgs_vs_forward_in(msgs_df , "total",  min_date, max_date) 
+print(p)
+# Grabar la gráfica en un archivo
+ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_total.png"))
+
+```
+
+### Zoom msgs_vs_forward send
+
+```{r msgs_vs_forward_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+if(params$zoom) {
+  # Llamamos a la función msgs_vs_forward
+  p <- msgs_vs_forward_in(msgs_df , "zoom",  params$date_ini_zoom, params$date_end_zoom) 
   print(p)
   # Salvamos la gráfica en un archivo
   ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_zoom.png"))
@@ -301,6 +344,34 @@ if(params$zoom) {
   print(p)
   # Grabar la gráfica en un archivo
   ggsave(filename = paste0(img_path,base_name_file_img,"_cumulative_sites_zoom.png"))
+}
+
+
+```
+
+## Topics
+
+### Periodo total
+
+```{r topics_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE}
+if(params$topics == TRUE){
+  p <- spread_topics_msgs(msgs_df, "total",  min_date, max_date, topics$topics) 
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_topics_total.png"))
+}
+
+
+```
+
+### zoom
+
+```{r topics_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE}
+if(params$topics == TRUE & params$zoom){
+  p <- spread_topics_msgs(msgs_df, "zoom", params$date_ini_zoom, params$date_end_zoom, topics$topics) 
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_topics_zoom.png"))
 }
 
 
@@ -384,6 +455,6 @@ if(ARS & params$zoom) {
   p <-words_frequency_by_community(msgs_df, "zoom",  params$date_ini_zoom, params$date_end_zoom, communities)
   print(p)
   # Salvamos la gráfica en un archivo
-  ggsave(paste0(img_path,base_name_file_img,"_words_frequency_by_group.png"))
+  ggsave(paste0(img_path,base_name_file_img,"_words_frequency_by_group_zoom.png"))
 }
 ```
