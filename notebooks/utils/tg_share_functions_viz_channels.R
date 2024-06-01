@@ -623,8 +623,12 @@ spread_topics_msgs <- function(df, periodo, ini_date, end_date, topics){
   first_time <- TRUE
   for (topic in topics) {
     aux_df <- df %>% 
-    filter (!is.na(text)) %>% 
-    filter(str_detect (tolower(message), tolower(topic))) %>%
+    filter (!is.na(message)) %>% 
+    mutate(msg_clean = str_replace_all(message,"(?i)\\bhttps?://\\S+", " " )) %>%
+    mutate(msg_clean = str_replace_all(msg_clean,
+                                       "[\\U0001F600-\\U0001F64F\\U0001F300-\\U0001F5FF\\U0001F680-\\U0001F6FF]\\U000025A0-\\U000025FF",
+                                       " ")) %>%
+    filter(str_detect (tolower(msg_clean), tolower(topic))) %>%
     mutate (topic = topic)
     if (first_time == TRUE){
       topics_df <- aux_df
