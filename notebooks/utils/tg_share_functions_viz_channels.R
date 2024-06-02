@@ -625,7 +625,7 @@ spread_topics_msgs <- function(df, periodo, ini_date, end_date, topics){
     aux_df <- df %>% 
     filter (!is.na(message)) %>% 
     mutate(msg_clean = str_replace_all(message,"(?i)\\bhttps?://\\S+", " " )) %>%
-    mutate(msg_clean = str_extract_all(msg_clean, "[:alpha:]+")) %>%
+    mutate(msg_clean = str_extract_all(msg_clean, "[:alnum:]+")) %>%
     mutate(msg_clean = paste(msg_clean, collapse = ',')) %>%
     filter(str_detect (tolower(msg_clean), tolower(topic))) %>%
     mutate (topic = topic)
