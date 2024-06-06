@@ -42,6 +42,9 @@ msgs_vs_views <- function(df, periodo,  ini_date, end_date, min_suscribers, max_
   max_reach <- max(msgs_vs_reach_df$reach,na.rm = TRUE)
   ajuste_escala <- max_reach/max_msgs
   limit_y = max_msgs
+  if (max_reach  == 0){
+    return("There are no views")
+  }
   p <- ggplot(data = msgs_vs_reach_df) + 
     # Pintar la evolución de los msgs
     geom_line(
@@ -53,7 +56,7 @@ msgs_vs_views <- function(df, periodo,  ini_date, end_date, min_suscribers, max_
     geom_area(
       aes( x = slot_time, y= num_msgs),
       fill ="steelblue4",
-      alpha = 0.7,
+      alpha = 0.3,
       show.legend = FALSE
     ) +
     # Pintar los la evolución del alcance  
@@ -153,8 +156,11 @@ msgs_vs_forward_out <- function(df, periodo,  ini_date, end_date) {
     ungroup()  
   # Calculamos las dos escalas
   max_msgs <- max(msgs_original_df$num_msgs,na.rm = TRUE)
-  max_forward <- max(msgs_forward_df$num_msgs,na.rm = TRUE)
-  ajuste_escala <- max_forward/max_msgs
+  max_forward_out <- max(msgs_forward_df$num_msgs,na.rm = TRUE)
+  if (max_forward_out  == 0){
+    return("There are no forwards send")
+  }
+  ajuste_escala <- max_forward_out/max_msgs
   limit_y = max_msgs
   #definimos la paleta de color
   my_color = c("Num. original msgs"= "steelblue4", "forward" = "red4")
@@ -163,18 +169,19 @@ msgs_vs_forward_out <- function(df, periodo,  ini_date, end_date) {
     geom_line(
       data = msgs_original_df,
       aes(x = slot_time, y = num_msgs, color = "Num. original msgs"),
-      size =1
+      size = 0.5
     ) +
     geom_area(
       data = msgs_original_df,
-      aes( x=slot_time, y= num_msgs), fill = "steelblue4", 
-      alpha=0.4
+      aes( x=slot_time, y= num_msgs),
+      fill = "steelblue4", 
+      alpha=0.3
     ) +
     # Pintamos los la evolución de los forward/hora
     geom_line(
       data = msgs_forward_df,
       aes( x = slot_time, y = num_msgs/ajuste_escala, color="forward"),
-      size =1.3)+
+      size = 0.5)+
     # Anotamos el máximo de msgs originales/hora
     geom_text_repel(
       data = msgs_original_df %>% top_n(1, num_msgs),
@@ -275,8 +282,11 @@ msgs_vs_forward_in <- function(df, periodo,  ini_date, end_date) {
     ungroup()  
   # Calculamos las dos escalas
   max_msgs <- max(msgs_original_df$num_msgs,na.rm = TRUE)
-  max_forward <- max(msgs_forward_df$num_msgs,na.rm = TRUE)
-  ajuste_escala <- max_forward/max_msgs
+  max_forward_in <- max(msgs_forward_df$num_msgs,na.rm = TRUE)
+  if (max_forward_in  == 0){
+    return("There are no forwards received")
+  }
+  ajuste_escala <- max_forward_in/max_msgs
   limit_y = max_msgs
   #definimos la paleta de color
   my_color = c("Num. original msgs"= "steelblue4", "forward" = "red4")
@@ -285,7 +295,7 @@ msgs_vs_forward_in <- function(df, periodo,  ini_date, end_date) {
     geom_line(
       data = msgs_original_df,
       aes(x = slot_time, y = num_msgs, color = "Num. original msgs"),
-      size =1
+      size = 0.5
     ) +
     geom_area(
       data = msgs_original_df,
@@ -296,7 +306,7 @@ msgs_vs_forward_in <- function(df, periodo,  ini_date, end_date) {
     geom_line(
       data = msgs_forward_df,
       aes( x = slot_time, y = num_msgs/ajuste_escala, color="forward"),
-      size =1.3)+
+      size = 0.5)+
     # Anotamos el máximo de msgs originales/hora
     geom_text_repel(
       data = msgs_original_df %>% top_n(1, num_msgs),
@@ -350,6 +360,130 @@ msgs_vs_forward_in <- function(df, periodo,  ini_date, end_date) {
     # Ponemos los títulos
     labs(
       title =  paste(base_title, ": msgs per",slot_time,"vs. forward received"),
+      x = "", 
+      color=""
+    ) +
+    # Aplicamos template
+    my_theme() +
+    theme(
+      legend.position="top",
+      axis.title.y = element_text(color = "steelblue4", size = 14),
+      axis.title.y.right = element_text(color = "red4", size = 14),
+      axis.text.y = element_text(color = "steelblue4"),
+      axis.text.y.right = element_text(color = "red4")
+    )
+  return(p)
+}
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# msgs_vs_replies
+#
+# Chart line de doble escala del total msgs vs replies
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+msgs_vs_replies <- function(df, periodo,  ini_date, end_date) {
+  # Si es zoom, acotamos el tiempo
+  if (periodo == "zoom"){
+    df <- df %>% 
+      filter(date >= ini_date & date <= end_date)
+  }
+  # Agrupamos los msgs por hora y calculamos los forward/hora
+  msgs_replies_df <- df %>% 
+    filter (relation == "original") %>%
+    group_by(slot_time) %>%
+    summarise(
+      num_msgs = sum(number_replies),
+      .groups = 'drop'
+    ) %>% 
+    ungroup() 
+  # Agrupamos los msgs por hora y calculamos los mensajes originales/hora
+  msgs_original_df <- df %>% 
+    filter (relation == "original") %>%
+    filter (is_reply == 0) %>%
+    group_by(slot_time) %>%
+    summarise(
+      num_msgs = n(),
+      .groups = 'drop'
+    ) %>% 
+    ungroup()  
+  # Calculamos las dos escalas
+  max_msgs <- max(msgs_original_df$num_msgs,na.rm = TRUE)
+  max_replies <- max(msgs_replies_df$num_msgs,na.rm = TRUE)
+  ajuste_escala <- max_replies/max_msgs
+  limit_y = max_msgs
+  #definimos la paleta de color
+  my_color = c("Num. original msgs"= "steelblue4", "replies" = "red4")
+  p <- ggplot() + 
+    # Pintamos la evolución de los msgs originales/hora
+    geom_line(
+      data = msgs_original_df,
+      aes(x = slot_time, y = num_msgs, color = "Num. original msgs"),
+      size = 0.5
+    ) +
+    geom_area(
+      data = msgs_original_df,
+      aes( x=slot_time, y= num_msgs), fill = "steelblue4", 
+      alpha=0.4
+    ) +
+    # Pintamos los la evolución de los replies/hora
+    geom_line(
+      data = msgs_replies_df,
+      aes( x = slot_time, y = num_msgs/ajuste_escala, color="replies"),
+      size = 0.5)+
+    # Anotamos el máximo de msgs originales/hora
+    geom_text_repel(
+      data = msgs_original_df %>% top_n(1, num_msgs),
+      aes(
+        x = slot_time, y = num_msgs * 1.1, 
+        label = paste0(
+          slot_time,
+          "\n",
+          "Max. original msgs = ",scales::comma(num_msgs)
+        )
+      ),
+      color = "grey50",
+      size = 3.5,
+      vjust = .5,
+      show.legend = FALSE
+    ) +
+    # Anotamos el máximo de replies/hora
+    geom_text_repel(
+      data = msgs_replies_df %>%  top_n(1, num_msgs),
+      aes(
+        x = slot_time, y = num_msgs/ajuste_escala *1.3, 
+        label = paste0(
+          slot_time,
+          "\n",
+          "Max.replies = ",scales::comma(num_msgs)
+        )
+      ),
+      color = "grey50",
+      size = 3.5,
+      vjust = .5,
+      show.legend = FALSE
+    ) +
+    # Ajustamos la escala de tiempo
+    scale_x_datetime(
+      date_labels = format_time(ini_date, end_date),
+      date_breaks = time_scale(ini_date, end_date)
+    ) +
+    # Ajustamos la doble escala
+    scale_y_continuous(
+      name = paste("Num. Original msgs per",slot_time), 
+      labels = label_number(scale_cut = scales::cut_si("")),
+      #limits= c(0,limit_y*1.4),
+      expand= c(0,0),
+      sec.axis = sec_axis(
+        trans=(~ . * ajuste_escala), 
+        name = paste("replies per",slot_time),
+        labels = label_number(scale_cut = scales::cut_si("")) )
+    ) +
+    # Aplicamos color
+    scale_color_manual(values = my_color) +
+    # Ponemos los títulos
+    labs(
+      title =  paste(base_title, ": msgs per",slot_time,"vs. replies"),
       x = "", 
       color=""
     ) +
@@ -522,13 +656,74 @@ accumulated_sites <-  function(df, periodo, ini_date, end_date) {
     theme( legend.position="top")
   return(p)
 }
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# words_frequency
+#
+# Word cloud de las palabras más frecuentes
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+words_frequency <- function(df, periodo, ini_date, end_date ) {
+  if (periodo == "zoom"){
+    df <- df %>% 
+      filter(date >= ini_date & date <= end_date)
+  }
+  #Obtenemos las stop words en Inglés, español y catalán
+  custom_stop_words <- bind_rows(
+    stop_words,
+    data_frame(word = tm::stopwords("spanish"),lexicon = "custom"),
+    data_frame(word = tm::stopwords("catalan"),lexicon = "custom"),
+    data_frame(word = tm::stopwords("Russian"),lexicon = "custom")
+  )
+  # Extraemos el corpus de texto de la columna "message" para generar el wordcloud 
+  corpus_text <- msgs_df %>%
+    filter(relation == "original")  %>%
+    # Extraemos las URL y los handles  de perfiles del texto del tweet
+    mutate(text_plain = gsub('http\\S+\\s*',"",message)) %>% # Quitamos las URLs
+    select(text_plain) %>%
+    unnest_tokens(word, text_plain) %>% # Convertimos las frases en un conjunto de palabras
+    group_by(word) %>%  # Agrupamos por palabras   
+    summarise(
+      freq = n(), # Calculamos la frecuencia de cada palabra
+      .group = "drop"
+    ) %>%  
+    ungroup() %>%
+    anti_join(custom_stop_words) %>% # Eliminamos las stop words
+    arrange(desc(freq)) %>% # Ordenamos de mayor a menor frecuencia de aparición
+    top_n(n = 50, freq)  # Obtenemos las 50 palabras más frecuentes de cada comunidad
+  # Generamos los colores para las palabras según frecuencia
+  paleta <- brewer.pal(8, "Dark2")
+  # Pintamos la nube de palabras
+  p <- ggplot() +
+    # Dibujamos la nube de palabras
+    geom_text_wordcloud_area(
+      data = corpus_text,
+      aes(label = word, size = freq, color = freq),
+      angle = 0.35
+    ) +
+    # Definimos la proporción del tamaño de las letras según frecuencia
+    geom_text_wordcloud_area(rm_outside = TRUE) +
+    geom_text_wordcloud_area(area_corr_power = 1) +
+    scale_radius(range = c(4, 20), limits = c(0, NA)) +
+    # Aplicamos una paleta de color
+    scale_color_gradientn(colors = paleta) +
+    # Definimos el título principal y el de los ejes
+    labs(
+      title = paste(base_title,": Most frequent words"),
+      x = "", y = "",
+      color=""
+    ) +
+    # Aplicamos un template minimalista
+    my_theme() 
+  return(p)
+}
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # words_frequency_by_community
 #
-# Word cloud de las localizaciones de los autores en una rejilla por grupo
+# Word cloud de las palabras más frecuentes por comunidad
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 words_frequency_by_community <- function(df, periodo, ini_date, end_date, communities ) {
@@ -619,15 +814,18 @@ spread_topics_msgs <- function(df, periodo, ini_date, end_date, topics){
     df <- df %>% 
       filter(date >= ini_date & date <= end_date)
   }
-   # extraemos los topics
+   # extraemos los  mensajes con topics
+  topics <- tolower(topics)
+  list_topic <- as.list(topics)
+  regex_topic <- paste(list_topic, collapse = "|") 
+  df <- df %>%
+    mutate(msg_clean = tolower(str_extract_all(message, "[:alnum:]+"))) %>%
+    filter(str_detect ( msg_clean, regex_topic)) 
   first_time <- TRUE
+  # extraemos cada topic por separado
   for (topic in topics) {
     aux_df <- df %>% 
-    filter (!is.na(message)) %>% 
-    mutate(msg_clean = str_replace_all(message,"(?i)\\bhttps?://\\S+", " " )) %>%
-    mutate(msg_clean = str_extract_all(msg_clean, "[:alnum:]+")) %>%
-    mutate(msg_clean = paste(msg_clean, collapse = ',')) %>%
-    filter(str_detect (tolower(msg_clean), tolower(topic))) %>%
+    filter(str_detect (msg_clean, topic)) %>%
     mutate (topic = topic)
     if (first_time == TRUE){
       topics_df <- aux_df
