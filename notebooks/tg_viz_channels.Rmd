@@ -117,7 +117,7 @@ if(file.exists(img_path)) {
 
 ## Leemos los datos
 
-```{r read_data, echo=FALSE, warning=FALSE}
+```{r read_data, echo=FALSE, warning=TRUE}
 # Leer fichero de mensajes
 print("Leyendo fichero de mensajes")
 if(ARS == TRUE) {
@@ -128,12 +128,16 @@ if(ARS == TRUE) {
     cols_only( 
       signature = col_character(),
       msg_id = col_character(),
+      channel_id = col_character(),
       channel_name = col_character(),
       message = col_character(),
       date = col_datetime(),
       msg_link = col_character(),
+      msg_from_peer = col_character(),
+      is_forward = col_integer(),
+      is_reply = col_integer(),
       forward_msg_link = col_character(),
-      from_channel_name = col_character(),
+      forward_msg_from_peer_name = col_character(),
       url_description = col_character(),
       views = col_integer(),
       number_replies = col_integer(),
@@ -166,12 +170,16 @@ if(ARS == TRUE) {
     cols_only( 
       signature = col_character(),
       msg_id = col_character(),
+      channel_id = col_character(),
       channel_name = col_character(),
       message = col_character(),
       date = col_datetime(),
       msg_link = col_character(),
       forward_msg_link = col_character(),
-      from_channel_name = col_character(),
+      msg_from_peer = col_character(),
+      is_forward = col_integer(),
+      is_reply = col_integer(),
+      forward_msg_from_peer_name = col_character(),
       url_description = col_character(),
       views = col_integer(),
       number_replies = col_integer(),
@@ -202,13 +210,14 @@ num_days <- as.numeric(difftime(max_date ,min_date , units = c("days")))
 slot_time <- ifelse(num_days <= 15, "hour", "day")
 ```
 
-## Adaptar datos
+## Adaptar y limpiardatos
 
 -   Redonderar por slot time
--   Establecer pico máximo par limite eje Y
--   Establecer relación y color
+-   Establecer relación
 
 ```{r set_time, warning=FALSE, include=FALSE}
+`%not_in%` <- purrr::negate(`%in%`)
+
 # Redondear por slot time
 msgs_df <- msgs %>%
   mutate(channel_dest = ifelse(
@@ -216,27 +225,15 @@ msgs_df <- msgs %>%
       str_extract(forward_msg_link, "(?<=https://t.me/)[^/]+"), 
       NA)) %>% 
   mutate (channel_dest = ifelse(channel_name == channel_dest,NA,channel_dest)) %>%
-  mutate(relation = ifelse(is.na(channel_dest),"original","forward")) %>%
+  mutate(relation = ifelse(is_forward == 1,"forward", "original")) %>%
   left_join(metadatos_df, by = c("channel_name" = "username")) %>%
   mutate(date = as.POSIXct(floor_date(date),"sec", tz = "")) %>%
   mutate(slot_time = as.POSIXct(floor_date(date,slot_time))) %>%
   arrange(date)
-# Calcular el pico de mensajes del slot de tiempo para dimensionar el eje Y de las gráficas
-msg_peak <- msgs_df %>%
-  group_by(slot_time) %>%
-  summarise(
-     msg_peak =n(),
-     .group = "drop"
-  ) %>%
-  ungroup() %>%
-  arrange(desc(msg_peak)) %>%
-  select(msg_peak) %>%
-  top_n(1) %>%
-  as.integer()
+
 # Establecer relación y color
 order_relation <- c("original", "forward")
 msgs_df$relation <- factor(msgs_df$relation,levels = order_relation )
-color_relation <- c("original" = "red4", "forward"="purple")
 
 ```
 
@@ -254,11 +251,17 @@ Adicionalmente se etiquetan los canames que estén en el rango definido en el pa
 
 ```{r msgs_reach_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Llamamos a la función msgs_vs_reach
-p <- msgs_vs_views(msgs_df, "total",  min_date, max_date, params$min_suscribers, params$max_overlaps ) 
+p <- msgs_vs_views(
+       msgs_df,
+       "total",
+       min_date,
+       max_date,
+       params$min_suscribers,
+       params$max_overlaps
+      ) 
 print(p)
 # Grabar la gráfica en un archivo
 ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_reach_total.png"))
-
 ```
 
 ### Zoom
@@ -266,7 +269,13 @@ ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_reach_total.png"))
 ```{r msgs_reach_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 if(params$zoom) {
   # Llamar a la función msgs_vs_reach
-  p <- msgs_vs_views(msgs_df, "zoom", params$date_ini_zoom, params$date_end_zoom, params$min_suscribers_zoom, params$max_overlaps)
+  p <- msgs_vs_views(
+        msgs_df,
+        "total",
+        params$date_ini_zoom,
+        params$date_ini_zoom,
+        params$min_suscribers,
+        params$max_overlaps )
   print(p)
   # Grabar la gráfica en un archivo
   ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_reach_zoom.png"))
@@ -278,23 +287,32 @@ if(params$zoom) {
 ### Periodo total
 
 ```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
-# Llamamos a la función msgs_vs_forward
-p <- msgs_vs_forward_out(msgs_df , "total",  min_date, max_date) 
-print(p)
-# Grabar la gráfica en un archivo
-ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_total.png"))
-
+# Llamamos a la función msgs_vs_forward_out
+if (max_forwards_out > 0) {
+  p <- msgs_vs_forward_out(
+    msgs_df,
+    "total",
+    min_date,
+    max_date)
+  print(p)
+  # Grabar la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_out_total.png"))
+}
 ```
 
-### Zoom msgs_vs_forward send
+### Zoom
 
 ```{r msgs_vs_forward_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 if(params$zoom) {
   # Llamamos a la función msgs_vs_forward
-  p <- msgs_vs_forward_out(msgs_df , "zoom",  params$date_ini_zoom, params$date_end_zoom) 
+  p <- msgs_vs_forward_out(
+    msgs_df,
+    "zoom",
+    params$date_ini_zoom,
+    params$date_end_zoom) 
   print(p)
   # Salvamos la gráfica en un archivo
-  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_zoom.png"))
+  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_out_zoom.png"))
 }
 ```
 
@@ -304,22 +322,64 @@ if(params$zoom) {
 
 ```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Llamamos a la función msgs_vs_forward
-p <- msgs_vs_forward_in(msgs_df , "total",  min_date, max_date) 
+p <- msgs_vs_forward_in(
+  msgs_df,
+  "total",
+  min_date,
+  max_date
+  ) 
 print(p)
 # Grabar la gráfica en un archivo
-ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_total.png"))
+ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_in__total.png"))
 
 ```
 
-### Zoom msgs_vs_forward send
+### Zoom
 
 ```{r msgs_vs_forward_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 if(params$zoom) {
   # Llamamos a la función msgs_vs_forward
-  p <- msgs_vs_forward_in(msgs_df , "zoom",  params$date_ini_zoom, params$date_end_zoom) 
+  p <- msgs_vs_forward_in(
+    msgs_df,
+    "zoom",
+    params$date_ini_zoom,
+    params$date_end_zoom) 
   print(p)
   # Salvamos la gráfica en un archivo
-  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_zoom.png"))
+  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_in_zoom.png"))
+}
+```
+## msgs vs. replies
+
+### Periodo total
+
+```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Llamamos a la función msgs_vs_forward
+p <- msgs_vs_replies(
+  msgs_df,
+  "total",
+  min_date,
+  max_date
+  ) 
+print(p)
+# Grabar la gráfica en un archivo
+ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_replies_total.png"))
+
+```
+
+### Zoom
+
+```{r msgs_vs_forward_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+if(params$zoom) {
+  # Llamamos a la función msgs_vs_forward
+  p <- msgs_vs_replies(
+    msgs_df,
+    "zoom",
+    params$date_ini_zoom,
+    params$date_end_zoom) 
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_replies_zoom.png"))
 }
 ```
 
@@ -348,6 +408,27 @@ if(params$zoom) {
 
 
 ```
+
+## Contenido de los msgs 
+
+### Periodo total
+
+```{r contenido_msgs_total, echo=FALSE, fig.height=5, fig.width=5, message=FALSE, warning=FALSE}
+p <-words_frequency(msgs_df, "Total", min_date, max_date)
+print(p)
+# Salvamos la gráfica en un archivo
+ggsave(paste0(img_path,base_name_file_img,"_words_frequenc_total.png"))
+```
+
+### Zoom
+
+```{r contenido_msgs_zoom, echo=FALSE, fig.height=5, fig.width=5, message=FALSE, warning=FALSE}
+p <-words_frequency(msgs_df, "zoom",  params$date_ini_zoom, params$date_end_zoom)
+print(p)
+# Salvamos la gráfica en un archivo
+ggsave(paste0(img_path,base_name_file_img,"_words_frequency_zoom.png"))
+```
+
 
 ## Topics
 
