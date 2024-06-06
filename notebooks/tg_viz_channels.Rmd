@@ -288,7 +288,6 @@ if(params$zoom) {
 
 ```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Llamamos a la función msgs_vs_forward_out
-if (max_forwards_out > 0) {
   p <- msgs_vs_forward_out(
     msgs_df,
     "total",
@@ -297,7 +296,6 @@ if (max_forwards_out > 0) {
   print(p)
   # Grabar la gráfica en un archivo
   ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_out_total.png"))
-}
 ```
 
 ### Zoom
