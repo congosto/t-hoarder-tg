@@ -136,6 +136,12 @@ msgs_vs_forward_out <- function(df, periodo,  ini_date, end_date) {
     df <- df %>% 
       filter(date >= ini_date & date <= end_date)
   }
+  # Miramos si hay forwards enviados
+  msgs_forward_df <- df %>% 
+    filter (relation == "forward")
+  if (nrow(msgs_forward_df) == 0){
+    return("There are no forwards send") 
+  }
   # Agrupamos los msgs por hora y calculamos los forward/hora
   msgs_forward_df <- df %>% 
     filter (relation == "forward") %>%
@@ -145,6 +151,7 @@ msgs_vs_forward_out <- function(df, periodo,  ini_date, end_date) {
       .groups = 'drop'
     ) %>% 
     ungroup() 
+
   # Agrupamos los msgs por hora y calculamos los mensajes originales/hora
   msgs_original_df <- df %>% 
     filter (relation == "original") %>%
@@ -157,9 +164,6 @@ msgs_vs_forward_out <- function(df, periodo,  ini_date, end_date) {
   # Calculamos las dos escalas
   max_msgs <- max(msgs_original_df$num_msgs,na.rm = TRUE)
   max_forward_out <- max(msgs_forward_df$num_msgs,na.rm = TRUE)
-  if (max_forward_out  == 0){
-    return("There are no forwards send")
-  }
   ajuste_escala <- max_forward_out/max_msgs
   limit_y = max_msgs
   #definimos la paleta de color
