@@ -83,17 +83,22 @@ msgs_df <- read_csv(
   name_file_in,
   col_names = TRUE,
   cols_only( 
-    signature = col_character(),
-    msg_id = col_character(),
-    channel_name = col_character(),
-    message = col_character(),
-    date = col_datetime(),
-    msg_link = col_character(),
-    forward_msg_link  = col_character(),
-    url_description = col_character(),
-    views = col_number(),
-    number_replies = col_number(),
-    number_forwards = col_number()
+      signature = col_character(),
+      msg_id = col_character(),
+      channel_id = col_character(),
+      channel_name = col_character(),
+      message = col_character(),
+      date = col_datetime(),
+      msg_link = col_character(),
+      msg_from_peer = col_character(),
+      is_forward = col_integer(),
+      is_reply = col_integer(),
+      forward_msg_link = col_character(),
+      forward_msg_from_peer_name = col_character(),
+      url_description = col_character(),
+      views = col_integer(),
+      number_replies = col_integer(),
+      number_forwards = col_integer(),
   ) 
 ) %>%
   group_by(signature) %>%

@@ -241,7 +241,7 @@ msgs_df$relation <- factor(msgs_df$relation,levels = order_relation )
 
 Gráfica de doble escala para representar la proporción de mensajes publicados y alcance obtenido. Estas variables tienen distinto orden de magnitud y por eso se representan con un eje Y doble.
 
-Adicionalmente se etiquetan los canames que estén en el rango definido en el parámetro **min_suscribers**. Este parámetro se adecuará al alcance de la gráfica. Si no aparece ningún canal puede se debido a dos motivos:
+Adicionalmente se etiquetan los canales que estén en el rango definido en el parámetro **min_suscribers**. Este parámetro se adecuará al alcance de la gráfica. Si no aparece ningún canal puede se debido a dos motivos:
 
 -   El valor del parámetro es muy alto y no hay canales con ese número de suscriptores
 
@@ -271,9 +271,9 @@ if(params$zoom) {
   # Llamar a la función msgs_vs_reach
   p <- msgs_vs_views(
         msgs_df,
-        "total",
+        "zoom",
         params$date_ini_zoom,
-        params$date_ini_zoom,
+        params$date_end_zoom,
         params$min_suscribers,
         params$max_overlaps )
   print(p)
@@ -286,7 +286,7 @@ if(params$zoom) {
 
 ### Periodo total
 
-```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r msgs_vs_forward_out_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Llamamos a la función msgs_vs_forward_out
   p <- msgs_vs_forward_out(
     msgs_df,
@@ -300,7 +300,7 @@ if(params$zoom) {
 
 ### Zoom
 
-```{r msgs_vs_forward_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r msgs_vs_forward_out_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 if(params$zoom) {
   # Llamamos a la función msgs_vs_forward
   p <- msgs_vs_forward_out(
@@ -318,7 +318,7 @@ if(params$zoom) {
 
 ### Periodo total
 
-```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r msgs_vs_forward_in_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Llamamos a la función msgs_vs_forward
 p <- msgs_vs_forward_in(
   msgs_df,
@@ -334,7 +334,7 @@ ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_in__total.png"))
 
 ### Zoom
 
-```{r msgs_vs_forward_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r msgs_vs_forward_in_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 if(params$zoom) {
   # Llamamos a la función msgs_vs_forward
   p <- msgs_vs_forward_in(
@@ -347,11 +347,12 @@ if(params$zoom) {
   ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_forward_in_zoom.png"))
 }
 ```
+
 ## msgs vs. replies
 
 ### Periodo total
 
-```{r msgs_vs_forward_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r msgs_vs_replies_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 # Llamamos a la función msgs_vs_forward
 p <- msgs_vs_replies(
   msgs_df,
@@ -367,7 +368,7 @@ ggsave(paste0(img_path,base_name_file_img,"_msgs_vs_replies_total.png"))
 
 ### Zoom
 
-```{r msgs_vs_forward_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r msgs_vs_replies_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE, paged.print=FALSE}
 if(params$zoom) {
   # Llamamos a la función msgs_vs_forward
   p <- msgs_vs_replies(
@@ -407,7 +408,7 @@ if(params$zoom) {
 
 ```
 
-## Contenido de los msgs 
+## Contenido de los msgs
 
 ### Periodo total
 
@@ -427,7 +428,6 @@ print(p)
 ggsave(paste0(img_path,base_name_file_img,"_words_frequency_zoom.png"))
 ```
 
-
 ## Topics
 
 ### Periodo total
@@ -445,7 +445,7 @@ if(params$topics == TRUE){
 
 ### zoom
 
-```{r topics_total, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE}
+```{r topics_zoom, echo=FALSE, fig.height=5, fig.width=9, message=FALSE, warning=FALSE}
 if(params$topics == TRUE & params$zoom){
   p <- spread_topics_msgs(msgs_df, "zoom", params$date_ini_zoom, params$date_end_zoom, topics$topics) 
   print(p)
