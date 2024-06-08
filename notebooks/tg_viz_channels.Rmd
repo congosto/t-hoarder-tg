@@ -422,10 +422,12 @@ ggsave(paste0(img_path,base_name_file_img,"_words_frequenc_total.png"))
 ### Zoom
 
 ```{r contenido_msgs_zoom, echo=FALSE, fig.height=5, fig.width=5, message=FALSE, warning=FALSE}
-p <-words_frequency(msgs_df, "zoom",  params$date_ini_zoom, params$date_end_zoom)
-print(p)
-# Salvamos la gráfica en un archivo
-ggsave(paste0(img_path,base_name_file_img,"_words_frequency_zoom.png"))
+if(params$zoom) {
+  p <-words_frequency(msgs_df, "zoom",  params$date_ini_zoom, params$date_end_zoom)
+  print(p)
+  # Salvamos la gráfica en un archivo
+  ggsave(paste0(img_path,base_name_file_img,"_words_frequency_zoom.png"))
+}
 ```
 
 ## Topics
