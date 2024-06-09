@@ -89,7 +89,7 @@ msgs_vs_views <- function(df, periodo,  ini_date, end_date, min_suscribers, max_
     ) +
     #Ajustamos la doble escala
     scale_y_continuous(
-      name = paste("Num. of original msgs per day",slot_time), 
+      name = paste("Num. of original msgs per ",slot_time), 
       labels = label_number(scale_cut = scales::cut_si("")),
       limits= c(0,limit_y * 1.2 ),
       expand= c(0,0),
@@ -516,6 +516,18 @@ msgs_by_community <-  function(df, periodo,  ini_date, end_date, communities) {
     df <- df %>% 
       filter(date >= ini_date & date <= end_date)
   }
+  # Calcular el pico de mensajes del slot de tiempo para dimensionar el eje Y de las gráficas
+  msg_peak <- df %>%
+    group_by(slot_time) %>%
+    summarise(
+      msg_peak =n(),
+      .group = "drop"
+    ) %>%
+    ungroup() %>%
+    arrange(desc(msg_peak)) %>%
+    select(msg_peak) %>%
+    top_n(1) %>%
+    as.integer()
   top_community <- communities$community
   top_community_names <- communities$name_community
   top_community_color <- communities$color
@@ -630,7 +642,7 @@ accumulated_sites <-  function(df, periodo, ini_date, end_date) {
       vjust = 1,
       hjust = 0,
       size = 4,
-      nudge_x =  expand_time(min_date,max_date, 2), # Ajuste eje x
+      nudge_x =  expand_time(ini_date, end_date, 2), # Ajuste eje x
       nudge_y = 0.005,  # Ajuste eje y
       direction="y",
       max.overlaps=30,
@@ -869,7 +881,7 @@ spread_topics_msgs <- function(df, periodo, ini_date, end_date, topics){
       vjust = 1,
       hjust = 0,
       size = 4,
-      nudge_x =  expand_time(min_date,max_date, 2), # Ajuste eje x
+      nudge_x =  expand_time(ini_date, end_date, 2), # Ajuste eje x
       nudge_y = 0.005,  # Ajuste eje y
       direction="y",
       max.overlaps=30,
